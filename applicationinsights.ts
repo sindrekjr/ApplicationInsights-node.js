@@ -1,46 +1,24 @@
-import CorrelationContextManager = require("./AutoCollection/CorrelationContextManager"); // Keep this first
 import AutoCollectConsole = require("./AutoCollection/Console");
 import AutoCollectExceptions = require("./AutoCollection/Exceptions");
 import AutoCollectPerformance = require("./AutoCollection/Performance");
-import AutoCollectHttpDependencies = require("./AutoCollection/HttpDependencies");
-import AutoCollectHttpRequests = require("./AutoCollection/HttpRequests");
-import Config = require("./Library/Config");
-import Context = require("./Library/Context");
 import CorrelationIdManager = require("./Library/CorrelationIdManager");
 import Logging = require("./Library/Logging");
-import Util = require("./Library/Util");
 import QuickPulseClient = require("./Library/QuickPulseStateManager");
 
 import { AutoCollectNativePerformance, IDisabledExtendedMetrics } from "./AutoCollection/NativePerformance";
 
 // We export these imports so that SDK users may use these classes directly.
 // They're exposed using "export import" so that types are passed along as expected
-export import TelemetryClient = require("./Library/NodeClient");
+export import TelemetryClient = require("./Library/TelemetryClient");
 export import Contracts = require("./Declarations/Contracts");
-
-export enum DistributedTracingModes {
-    /**
-     * (Default) Send Application Insights correlation headers
-     */
-
-    AI=0,
-
-    /**
-     * Send both W3C Trace Context headers and back-compatibility Application Insights headers
-     */
-    AI_AND_W3C
-}
+import provider from "./Library/Provider";
 
 // Default autocollection configuration
 let _isConsole = true;
 let _isConsoleLog = false;
 let _isExceptions = true;
 let _isPerformance = true;
-let _isRequests = true;
-let _isDependencies = true;
 let _isDiskRetry = true;
-let _isCorrelating = true;
-let _forceClsHooked: boolean;
 let _isSendingLiveMetrics = false; // Off by default
 let _isNativePerformance = true;
 let _disabledExtendedMetrics: IDisabledExtendedMetrics;
@@ -52,8 +30,6 @@ let _console: AutoCollectConsole;
 let _exceptions: AutoCollectExceptions;
 let _performance: AutoCollectPerformance;
 let _nativePerformance: AutoCollectNativePerformance;
-let _serverRequests: AutoCollectHttpRequests;
-let _clientRequests: AutoCollectHttpDependencies;
 
 let _isStarted = false;
 
@@ -81,8 +57,6 @@ export function setup(setupString?: string) {
         _console = new AutoCollectConsole(defaultClient);
         _exceptions = new AutoCollectExceptions(defaultClient);
         _performance = new AutoCollectPerformance(defaultClient);
-        _serverRequests = new AutoCollectHttpRequests(defaultClient);
-        _clientRequests = new AutoCollectHttpDependencies(defaultClient);
         if (!_nativePerformance) {
             _nativePerformance = new AutoCollectNativePerformance(defaultClient);
         }
@@ -110,9 +84,6 @@ export function start() {
         _exceptions.enable(_isExceptions);
         _performance.enable(_isPerformance);
         _nativePerformance.enable(_isNativePerformance, _disabledExtendedMetrics);
-        _serverRequests.useAutoCorrelation(_isCorrelating, _forceClsHooked);
-        _serverRequests.enable(_isRequests);
-        _clientRequests.enable(_isDependencies);
         if (liveMetricsClient && _isSendingLiveMetrics) {
             liveMetricsClient.enable(_isSendingLiveMetrics);
         }
@@ -124,54 +95,11 @@ export function start() {
 }
 
 /**
- * Returns an object that is shared across all code handling a given request.
- * This can be used similarly to thread-local storage in other languages.
- * Properties set on this object will be available to telemetry processors.
- *
- * Do not store sensitive information here.
- * Custom properties set on this object can be exposed in a future SDK
- * release via outgoing HTTP headers.
- * This is to allow for correlating data cross-component.
- *
- * This method will return null if automatic dependency correlation is disabled.
- * @returns A plain object for request storage or null if automatic dependency correlation is disabled.
- */
-export function getCorrelationContext(): CorrelationContextManager.CorrelationContext {
-    if (_isCorrelating) {
-        return CorrelationContextManager.CorrelationContextManager.getCurrentContext();
-    }
-
-    return null;
-}
-
-/**
- * Returns a function that will get the same correlation context within its
- * function body as the code executing this function.
- * Use this method if automatic dependency correlation is not propagating
- * correctly to an asynchronous callback.
- */
-export function wrapWithCorrelationContext<T extends Function>(fn: T): T {
-    return CorrelationContextManager.CorrelationContextManager.wrapCallback(fn);
-}
-
-/**
  * The active configuration for global SDK behaviors, such as autocollection.
  */
 export class Configuration {
     // Convenience shortcut to ApplicationInsights.start
     public static start = start;
-
-     /**
-      * Sets the distributed tracing modes. If W3C mode is enabled, W3C trace context
-      * headers (traceparent/tracestate) will be parsed in all incoming requests, and included in outgoing
-      * requests. In W3C mode, existing back-compatibility AI headers will also be parsed and included.
-      * Enabling W3C mode will not break existing correlation with other Application Insights instrumented
-      * services. Default=AI
-     */
-    public static setDistributedTracingMode(value: DistributedTracingModes) {
-        CorrelationIdManager.w3cEnabled = value === DistributedTracingModes.AI_AND_W3C;
-        return Configuration;
-    }
 
     /**
      * Sets the state of console and logger tracking (enabled by default for third-party loggers only)
@@ -229,10 +157,6 @@ export class Configuration {
      * @returns {Configuration} this class
      */
     public static setAutoCollectRequests(value: boolean) {
-        _isRequests = value;
-        if (_isStarted) {
-            _serverRequests.enable(value);
-        }
 
         return Configuration;
     }
@@ -243,10 +167,6 @@ export class Configuration {
      * @returns {Configuration} this class
      */
     public static setAutoCollectDependencies(value: boolean) {
-        _isDependencies = value;
-        if (_isStarted) {
-            _clientRequests.enable(value);
-        }
 
         return Configuration;
     }
@@ -258,11 +178,6 @@ export class Configuration {
      * @returns {Configuration} this class
      */
     public static setAutoDependencyCorrelation(value: boolean, useAsyncHooks?: boolean) {
-        _isCorrelating = value;
-        _forceClsHooked = useAsyncHooks;
-        if (_isStarted) {
-            _serverRequests.useAutoCorrelation(value, useAsyncHooks);
-        }
 
         return Configuration;
     }
@@ -295,8 +210,7 @@ export class Configuration {
      * @returns {Configuration} this class
      */
     public static setInternalLogging(enableDebugLogging = false, enableWarningLogging = true) {
-        Logging.enableDebug = enableDebugLogging;
-        Logging.disableWarnings = !enableWarningLogging;
+        // @todo
         return Configuration;
     }
 
@@ -345,15 +259,15 @@ export function dispose() {
     if (_nativePerformance) {
         _nativePerformance.dispose();
     }
-    if(_serverRequests) {
-        _serverRequests.dispose();
-    }
-    if(_clientRequests) {
-        _clientRequests.dispose();
-    }
     if(liveMetricsClient) {
         liveMetricsClient.enable(false);
         _isSendingLiveMetrics = false;
         liveMetricsClient = undefined;
     }
+    provider.stop();
 }
+
+export enum DistributedTracingModes {
+    AI=0,
+    AI_AND_W3C,
+};

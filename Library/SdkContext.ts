@@ -55,20 +55,7 @@ class Context {
 
     private _loadInternalContext() {
         // note: this should return the sdk package.json
-        let packageJsonPath = path.resolve(__dirname, "../../package.json");
-
-        if (!Context.sdkVersion) {
-            Context.sdkVersion = "unknown";
-            try {
-                let packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
-                if (packageJson && typeof packageJson.version === "string") {
-                    Context.sdkVersion = packageJson.version;
-                }
-            } catch (exception) {
-                Logging.info("unable to read app version: ", exception);
-            }
-        }
-
+        Context.sdkVersion = "2.0.0";
         this.tags[this.keys.internalSdkVersion] = "node:" + Context.sdkVersion;
     }
 }

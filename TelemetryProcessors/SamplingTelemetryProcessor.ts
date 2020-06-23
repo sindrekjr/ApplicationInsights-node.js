@@ -1,5 +1,5 @@
 import Contracts = require("../Declarations/Contracts");
-import { CorrelationContext } from "../AutoCollection/CorrelationContextManager";
+import { CorrelationContext } from "../Library/CorrelationContext";
 
 /**
  *  A telemetry processor that handles sampling.
@@ -13,9 +13,10 @@ export function samplingTelemetryProcessor(envelope: Contracts.Envelope, context
     } else if (envelope.data && Contracts.TelemetryType.Metric === Contracts.baseTypeToTelemetryType(envelope.data.baseType as Contracts.TelemetryTypeValues)) {
         // Exclude MetricData telemetry from sampling
         return true;
-    } else if (contextObjects.correlationContext && contextObjects.correlationContext.operation) {
+    } else if (contextObjects.correlationContext) {
         // If we're using dependency correlation, sampling should retain all telemetry from a given request
-        isSampledIn = getSamplingHashCode(contextObjects.correlationContext.operation.id) < samplingPercentage;
+        isSampledIn = contextObjects.correlationContext.traceFlags === 1
+            && getSamplingHashCode(contextObjects.correlationContext.traceId) < samplingPercentage;
     } else {
         // If we're not using dependency correlation, sampling should use a random distribution on each item
         isSampledIn = (Math.random() * 100) < samplingPercentage;

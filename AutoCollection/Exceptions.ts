@@ -1,20 +1,17 @@
-import http = require("http");
-
-import Contracts = require("../Declarations/Contracts");
-import Logging = require("../Library/Logging");
 import TelemetryClient = require("../Library/TelemetryClient");
-import Sender = require("../Library/Sender");
-import Queue = require("../Library/Channel");
-import Util = require("../Library/Util");
+
+type ExceptionHandle =
+ | "uncaughtExceptionMonitor"
+ | "uncaughtException"
+ | "unhandledRejection";
 
 class AutoCollectExceptions {
 
     public static INSTANCE: AutoCollectExceptions = null;
-    public static UNCAUGHT_EXCEPTION_MONITOR_HANDLER_NAME = "uncaughtExceptionMonitor";
-    public static UNCAUGHT_EXCEPTION_HANDLER_NAME = "uncaughtException";
-    public static UNHANDLED_REJECTION_HANDLER_NAME = "unhandledRejection";
+    public static UNCAUGHT_EXCEPTION_MONITOR_HANDLER_NAME: ExceptionHandle = "uncaughtExceptionMonitor";
+    public static UNCAUGHT_EXCEPTION_HANDLER_NAME: ExceptionHandle = "uncaughtException";
+    public static UNHANDLED_REJECTION_HANDLER_NAME: ExceptionHandle = "unhandledRejection";
 
-    private static _RETHROW_EXIT_MESSAGE = "Application Insights Rethrow Exception Handler";
     private static _FALLBACK_ERROR_MESSAGE = "A promise was rejected without providing an error. Application Insights generated this error stack for you.";
     private static _canUseUncaughtExceptionMonitor = false;
     private _exceptionListenerHandle: (reThrow: boolean, error: Error) => void;
@@ -46,11 +43,11 @@ class AutoCollectExceptions {
             if (!this._exceptionListenerHandle) {
                 // For scenarios like Promise.reject(), an error won't be passed to the handle. Create a placeholder
                 // error for these scenarios.
-                var handle = (reThrow: boolean, name: string, error: Error = new Error(AutoCollectExceptions._FALLBACK_ERROR_MESSAGE)) => {
+                var handle = (reThrow: boolean, name: ExceptionHandle, error: Error = new Error(AutoCollectExceptions._FALLBACK_ERROR_MESSAGE)) => {
                     this._client.trackException({ exception: error });
                     this._client.flush({ isAppCrashing: true });
                     // only rethrow when we are the only listener
-                    if (reThrow && name && process.listeners(name).length === 1) {
+                    if (reThrow && name && process.listeners(name as any).length === 1) {
                         console.error(error);
                         process.exit(1);
                     }

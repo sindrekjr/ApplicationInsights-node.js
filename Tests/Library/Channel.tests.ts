@@ -46,8 +46,8 @@ describe("Library/Channel", () => {
     });
 
     afterEach(() => {
-        sendSpy.reset();
-        saveSpy.reset();
+        sendSpy.resetHistory();
+        saveSpy.resetHistory();
     });
 
     describe("#send(envelope)", () => {

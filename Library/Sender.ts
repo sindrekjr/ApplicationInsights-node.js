@@ -1,16 +1,14 @@
 ﻿import fs = require("fs");
-import http = require("http");
-import https = require("https");
 import os = require("os");
 import path = require("path");
-import url = require("url");
 import zlib = require("zlib");
 import child_process = require("child_process");
 
 import Logging = require("./Logging");
 import Config = require("./Config")
-import AutoCollectHttpDependencies = require("../AutoCollection/HttpDependencies");
 import Util = require("./Util");
+
+import type * as http from 'http';
 
 class Sender {
     private static TAG = "Sender";
@@ -105,15 +103,15 @@ class Sender {
                 options.headers["Content-Length"] = payload.length.toString();
             } else {
                 options.headers["Content-Encoding"] = "gzip";
-                options.headers["Content-Length"] = buffer.length;
+                options.headers["Content-Length"] = String(buffer.length);
             }
 
             Logging.info(Sender.TAG, options);
 
-            // Ensure this request is not captured by auto-collection.
-            (<any>options)[AutoCollectHttpDependencies.disableCollectionRequestOption] = true;
+            // @todo: Ensure this request is not captured by auto-collection.
+            // (<any>options)[AutoCollectHttpDependencies.disableCollectionRequestOption] = true;
 
-            var requestCallback = (res: http.ClientResponse) => {
+            var requestCallback = (res: http.IncomingMessage) => {
                 res.setEncoding("utf-8");
 
                 //returns empty if the data is accepted

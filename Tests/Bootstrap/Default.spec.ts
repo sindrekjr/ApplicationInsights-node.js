@@ -23,11 +23,11 @@ describe("#setupAndStart()", () => {
     const startSpy = sinon.spy(appInsights, "start");
 
     before(() => {
-        startSpy.reset();
+        startSpy.resetHistory();
     });
 
     afterEach(() => {
-        startSpy.reset();
+        startSpy.resetHistory();
         delete require.cache[require.resolve("../../Bootstrap/Default")];
     });
 
@@ -39,7 +39,7 @@ describe("#setupAndStart()", () => {
         const logger = new LoggerSpy();
         const origEnv = process.env.ApplicationInsightsAgent_EXTENSION_VERSION;
         process.env.ApplicationInsightsAgent_EXTENSION_VERSION = "~2";
-        const alreadyExistsStub = sinon.stub(Helpers, "sdkAlreadyExists", () => false);
+        const alreadyExistsStub = sinon.stub(Helpers, "sdkAlreadyExists").callsFake(() => false);
 
         // Test
         const Default = require("../../Bootstrap/Default") as typeof DefaultTypes;
@@ -63,7 +63,7 @@ describe("#setupAndStart()", () => {
         const logger = new LoggerSpy();
         const origEnv = process.env.ApplicationInsightsAgent_EXTENSION_VERSION;
         process.env.ApplicationInsightsAgent_EXTENSION_VERSION = "~2";
-        const alreadyExistsStub = sinon.stub(Helpers, "sdkAlreadyExists", () => false);
+        const alreadyExistsStub = sinon.stub(Helpers, "sdkAlreadyExists").callsFake(() => false);
 
         // Test
         const Default = require("../../Bootstrap/Default") as typeof DefaultTypes;
@@ -89,7 +89,7 @@ describe("#setupAndStart()", () => {
         const logger = new LoggerSpy();
         const origEnv = process.env.ApplicationInsightsAgent_EXTENSION_VERSION;
         process.env.ApplicationInsightsAgent_EXTENSION_VERSION = "disabled";
-        const alreadyExistsStub = sinon.stub(Helpers, "sdkAlreadyExists", () => false);
+        const alreadyExistsStub = sinon.stub(Helpers, "sdkAlreadyExists").callsFake(() => false);
 
         // Test
         const Default = require("../../Bootstrap/Default") as typeof DefaultTypes;
@@ -118,7 +118,7 @@ describe("#setupAndStart()", () => {
         process.env.ApplicationInsightsAgent_EXTENSION_VERSION = "~2";
         delete process.env.APPINSIGHTS_INSTRUMENTATIONKEY;
         delete process.env.APPLICATIONINSIGHTS_CONNECTION_STRING;
-        const alreadyExistsStub = sinon.stub(Helpers, "sdkAlreadyExists", () => false);
+        const alreadyExistsStub = sinon.stub(Helpers, "sdkAlreadyExists").callsFake(() => false);
 
         // Test
         const Default = require("../../Bootstrap/Default") as typeof DefaultTypes;

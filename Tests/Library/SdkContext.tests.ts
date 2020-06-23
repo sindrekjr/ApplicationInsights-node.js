@@ -1,20 +1,19 @@
 import assert = require("assert");
 import sinon = require("sinon");
-import http = require("http");
 import os = require("os");
 
-import Context = require("../../Library/Context");
+import Context = require("../../Library/SdkContext");
 
-describe("Library/Context", () => {
+describe("Library/SdkContext", () => {
     describe("#constructor()", () => {
         var stubs: Array<any> = [];
         beforeEach(() => {
             stubs = [
-                sinon.stub(os, "hostname", () => "host"),
-                sinon.stub(os, "type", () => "type"),
-                sinon.stub(os, "arch", () => "arch"),
-                sinon.stub(os, "release", () => "release"),
-                sinon.stub(os, "platform", () => "platform")
+                sinon.stub(os, "hostname").callsFake(() => "host"),
+                sinon.stub(os, "type").callsFake(() => "type"),
+                sinon.stub(os, "arch").callsFake(() => "arch"),
+                sinon.stub(os, "release").callsFake(() => "release"),
+                sinon.stub(os, "platform").callsFake(() => "platform" as any)
             ];
         });
 
@@ -40,7 +39,7 @@ describe("Library/Context", () => {
         it("should set internalSdkVersion to 'node:<version>'", () => {
             var context = new Context();
             // todo: make this less fragile (will need updating on each minor version change)
-            assert.equal(context.tags[context.keys.internalSdkVersion].substring(0, 9), "node:1.8.");
+            assert.equal(context.tags[context.keys.internalSdkVersion].substring(0, 9), "node:2.0.");
         });
 
         it("should correctly set device context", () => {

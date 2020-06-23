@@ -1,7 +1,7 @@
 import TelemetryClient= require("../Library/TelemetryClient");
 import Constants = require("../Declarations/Constants");
 import Config = require("../Library/Config");
-import Context = require("../Library/Context");
+import Context = require("../Library/SdkContext");
 import Logging= require("../Library/Logging");
 
 /**

@@ -1,6 +1,5 @@
 import https = require("https");
 import Config = require("./Config");
-import AutoCollectHttpDependencies = require("../AutoCollection/HttpDependencies");
 import Logging = require("./Logging");
 import Util = require("./Util");
 
@@ -39,7 +38,8 @@ class QuickPulseSender {
     private _submitData(envelope: Contracts.EnvelopeQuickPulse | Contracts.EnvelopeQuickPulse[], done: (shouldPOST?: boolean, res?: http.IncomingMessage) => void, postOrPing: "post" | "ping"): void {
         const payload = JSON.stringify(envelope);
         var options = {
-            [AutoCollectHttpDependencies.disableCollectionRequestOption]: true,
+            // @todo: implement "ignore" header
+            // [AutoCollectHttpDependencies.disableCollectionRequestOption]: true,
             host: this._config.quickPulseHost,
             method: QuickPulseConfig.method,
             path: `/QuickPulseService.svc/${postOrPing}?ikey=${this._config.instrumentationKey}`,

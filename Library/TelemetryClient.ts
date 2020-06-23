@@ -1,18 +1,21 @@
+import Provider from './Provider';
 import url = require("url");
 import os = require("os");
 
 import Config = require("./Config");
-import Context = require("./Context");
+import Context = require("./SdkContext");
 import Contracts = require("../Declarations/Contracts");
 import Channel = require("./Channel");
 import TelemetryProcessors = require("../TelemetryProcessors");
-import { CorrelationContextManager } from "../AutoCollection/CorrelationContextManager";
 import Sender = require("./Sender");
 import Util = require("./Util");
 import Logging = require("./Logging");
 import FlushOptions = require("./FlushOptions");
 import EnvelopeFactory = require("./EnvelopeFactory");
 import QuickPulseStateManager = require("./QuickPulseStateManager");
+import * as opentelemetry from '@opentelemetry/api';
+import * as tracing from '@opentelemetry/tracing';
+import { AzureMonitorTraceExporter } from '@azure/monitor-opentelemetry-exporter';
 
 /**
  * Application Insights telemetry client provides interface to track telemetry items, register telemetry initializers and
@@ -26,6 +29,8 @@ class TelemetryClient {
     public commonProperties: { [key: string]: string; };
     public channel: Channel;
     public quickPulseClient: QuickPulseStateManager;
+    public static tracer: opentelemetry.Tracer;
+    public tracer = TelemetryClient.tracer;
 
     /**
      * Constructs a new client of the client
@@ -39,6 +44,18 @@ class TelemetryClient {
 
         var sender = new Sender(this.config);
         this.channel = new Channel(() => config.disableAppInsights, () => config.maxBatchSize, () => config.maxBatchIntervalMs, sender);
+
+        if (!TelemetryClient.tracer) {
+            Provider.addSpanProcessor(
+                new tracing.BatchSpanProcessor(
+                    new AzureMonitorTraceExporter({
+                        connectionString: setupString,
+                        instrumentationKey: setupString,
+                    }),
+                ),
+            );
+            this.tracer = TelemetryClient.tracer = Provider.getTracer("applicationinsights");
+        }
     }
 
     /**
@@ -149,7 +166,9 @@ class TelemetryClient {
 
             // Ideally we would have a central place for "internal" telemetry processors and users can configure which ones are in use.
             // This will do for now. Otherwise clearTelemetryProcessors() would be problematic.
-            accepted = accepted && TelemetryProcessors.samplingTelemetryProcessor(envelope, { correlationContext: CorrelationContextManager.getCurrentContext() });
+            accepted = accepted && TelemetryProcessors.samplingTelemetryProcessor(envelope, {
+                correlationContext: this.tracer.getCurrentSpan()?.context(),
+            });
 
             if (accepted) {
                 TelemetryProcessors.performanceMetricsTelemetryProcessor(envelope, this.quickPulseClient);
@@ -187,7 +206,7 @@ class TelemetryClient {
         }
 
         contextObjects = contextObjects || {};
-        contextObjects['correlationContext'] = CorrelationContextManager.getCurrentContext();
+        contextObjects['correlationContext'] = this.tracer.getCurrentSpan()?.context();
 
         for (var i = 0; i < telemetryProcessorsCount; ++i) {
             try {

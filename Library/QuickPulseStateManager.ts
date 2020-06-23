@@ -3,11 +3,10 @@ import Config = require("./Config");
 import QuickPulseEnvelopeFactory = require("./QuickPulseEnvelopeFactory");
 import QuickPulseSender = require("./QuickPulseSender");
 import Constants = require("../Declarations/Constants");
-import Context = require("./Context");
+import Context = require("./SdkContext");
 
 import * as http from "http";
 import * as Contracts from "../Declarations/Contracts";
-
 
 /** State Container for sending to the QuickPulse Service */
 class QuickPulseStateManager {

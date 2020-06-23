@@ -37,7 +37,7 @@ describe("Library/QuickPulseStateManager", () => {
             qps = null;
         });
         it("should call _goQuickPulse() when isEnabled == true", () => {
-            const qpsStub = sinon.stub(qps, "_goQuickPulse");
+            const qpsStub = sinon.stub(qps as any, "_goQuickPulse");
 
             assert.ok(qpsStub.notCalled);
             qps.enable(true);
@@ -83,8 +83,8 @@ describe("Library/QuickPulseStateManager", () => {
 
         beforeEach(() => {
             qps = new QuickPulseClient("ikey");
-            postStub = sinon.stub(qps, "_post");
-            pingStub = sinon.stub(qps, "_ping");
+            postStub = sinon.stub(qps as any, "_post");
+            pingStub = sinon.stub(qps as any, "_ping");
         })
         afterEach(() => {
             qps = null;

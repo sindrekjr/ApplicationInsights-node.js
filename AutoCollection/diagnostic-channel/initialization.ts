@@ -5,7 +5,6 @@
 // This is to avoid requiring the actual module if the NO_DIAGNOSTIC_CHANNEL env is present
 import * as DiagChannelPublishers from "diagnostic-channel-publishers";
 import * as DiagChannel from "diagnostic-channel";
-import { AsyncScopeManager } from "../AsyncHooksScopeManager";
 import Logging = require("../../Library/Logging");
 
 export const IsInitialized = !process.env["APPLICATION_INSIGHTS_NO_DIAGNOSTIC_CHANNEL"];
@@ -18,14 +17,7 @@ if (IsInitialized) {
     const modules: {[key: string] : any} = {
         bunyan: publishers.bunyan,
         console: publishers.console,
-        mongodb: publishers.mongodb,
-        mongodbCore: publishers.mongodbCore,
-        mysql: publishers.mysql,
-        redis: publishers.redis,
-        pg: publishers.pg,
-        pgPool: publishers.pgPool,
         winston: publishers.winston,
-        azuresdk: publishers.azuresdk
     };
     for (const mod in modules) {
         if (unpatchedModules.indexOf(mod) === -1) {
@@ -46,5 +38,4 @@ export function registerContextPreservation(cb: (cb: Function) => Function) {
     }
     const diagChannel = (require("diagnostic-channel") as typeof DiagChannel);
     diagChannel.channel.addContextPreservation(cb);
-    diagChannel.channel.spanContextPropagator = AsyncScopeManager;
 }

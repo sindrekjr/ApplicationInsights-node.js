@@ -3,7 +3,7 @@ import Contracts = require("../Declarations/Contracts")
 import Constants = require("../Declarations/Constants");
 import Util = require("./Util")
 import Config = require("./Config");
-import Context = require("./Context");
+import SdkContext = require("./SdkContext");
 import Logging = require("./Logging");
 
 var StreamId = Util.w3cTraceId(); // Create a guid
@@ -11,7 +11,7 @@ var StreamId = Util.w3cTraceId(); // Create a guid
 class QuickPulseEnvelopeFactory {
     private static keys = new Contracts.ContextTagKeys();
 
-    public static createQuickPulseEnvelope(metrics: Contracts.MetricQuickPulse[], documents: Contracts.DocumentQuickPulse[], config: Config, context: Context): Contracts.EnvelopeQuickPulse {
+    public static createQuickPulseEnvelope(metrics: Contracts.MetricQuickPulse[], documents: Contracts.DocumentQuickPulse[], config: Config, context: SdkContext): Contracts.EnvelopeQuickPulse {
         const machineName = (os && typeof os.hostname === "function"
             && os.hostname()) || "Unknown"; // Note: os.hostname() was added in node v0.3.3
         const instance = (context.tags

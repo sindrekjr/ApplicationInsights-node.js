@@ -58,7 +58,7 @@ describe("Library/Util", () => {
 
     describe("#w3cTraceId()", () => {
         it("should generate a valid trace id", () => {
-            var mathStub = sinon.stub(Math, "random", () => 0);
+            var mathStub = sinon.stub(Math, "random").callsFake(() => 0);
             var expected = "00000000000040008000000000000000";
             var actual = Util.w3cTraceId();
             assert.equal(actual, expected, "expected guid was generated");
@@ -109,7 +109,7 @@ describe("Library/Util", () => {
 
     describe("#random32()", () => {
         let test = (i: number, expected: number) => {
-            let mathStub = sinon.stub(Math, "random", () => i);
+            let mathStub = sinon.stub(Math, "random").callsFake(() => i);
             assert.equal(Util.random32(), expected);
             mathStub.restore();
         }
@@ -125,7 +125,7 @@ describe("Library/Util", () => {
 
     describe("#randomu32()", () => {
         let test = (i: number, expected: number) => {
-            let mathStub = sinon.stub(Math, "random", () => i);
+            let mathStub = sinon.stub(Math, "random").callsFake(() => i);
             assert.equal(Util.randomu32(), expected);
             mathStub.restore();
         }

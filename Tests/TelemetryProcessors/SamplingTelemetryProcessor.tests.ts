@@ -77,11 +77,11 @@ describe("TelemetryProcessors/SamplingTelemetryProcessor", () => {
             mockData.sampleRate = 33;
 
             for (var i=0; i<iterations; i++) {
-                var result = Sampling.samplingTelemetryProcessor(mockData, <any>{correlationContext: {operation: {id: "a"}}});
+                var result = Sampling.samplingTelemetryProcessor(mockData, <any>{correlationContext: {traceFlags: 1}});
                 if (result) accepted++;
             }
 
-            assert.equal(accepted, iterations, "data should pass 100% of the time");            
+            assert.strictEqual(accepted, iterations, "data should pass 100% of the time");
         });
 
         it("will keep all telemetry from an operation together if correlation tracking is enabled #2", () => {
@@ -94,7 +94,7 @@ describe("TelemetryProcessors/SamplingTelemetryProcessor", () => {
                 if (result) accepted++;
             }
 
-            assert.equal(accepted, 0, "data should pass 0% of the time");            
+            assert.equal(accepted, 0, "data should pass 0% of the time");
         });
     });
     describe("#getSamplingHashCode()", () => {
