@@ -23,17 +23,6 @@ export = {
     requestIdHeader: "request-id",
 
     /**
-     * Legacy Header containing the id of the immediate caller
-     */
-    parentIdHeader: "x-ms-request-id",
-
-    /**
-     * Legacy Header containing the correlation id that kept the same for every telemetry item
-     * across transactions
-     */
-    rootIdHeader: "x-ms-request-root-id",
-
-    /**
      * Correlation-Context header
      *
      * Not currently actively used, but the contents should be passed from incoming to outgoing requests

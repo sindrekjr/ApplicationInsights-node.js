@@ -1,4 +1,3 @@
-import http = require("http");
 import https = require("https");
 import assert = require("assert");
 import path = require("path")
@@ -9,7 +8,6 @@ import events = require("events");
 import child_process = require("child_process");
 import AppInsights = require("../applicationinsights");
 import Sender = require("../Library/Sender");
-import { EventEmitter } from "events";
 
 /**
  * A fake response class that passes by default
@@ -141,12 +139,12 @@ class fakeHttpsServer extends events.EventEmitter {
 }
 
 describe("EndToEnd", () => {
-    let request;
+    let request: any;
     describe("Basic usage", () => {
         var sandbox: sinon.SinonSandbox;
 
         beforeEach(() => {
-            sandbox = sinon.sandbox.create();
+            sandbox = sinon.createSandbox();
             request = sandbox.stub(https, "request").callsFake((options: any, callback: any): any => {
                 var req = new fakeRequest(false);
                 req.on("end", callback);
@@ -157,8 +155,6 @@ describe("EndToEnd", () => {
         afterEach(() => {
             // Dispose the default app insights client and auto collectors so that they can be reconfigured
             // cleanly for each test
-            // @todo
-            // CorrelationContextManager.reset();
             AppInsights.dispose();
             sandbox.restore();
         });
@@ -184,193 +180,6 @@ describe("EndToEnd", () => {
                 }
             });
         });
-
-        it("should collect http request telemetry", (done) => {
-            var fakeHttpSrv = new fakeHttpServer();
-            sandbox.stub(http, 'createServer').callsFake((callback): any => {
-                fakeHttpSrv.setCallback(callback);
-                return fakeHttpSrv;
-            });
-
-            AppInsights
-                .setup("ikey")
-                .setAutoCollectRequests(true)
-                .start();
-
-            var track = sandbox.stub(AppInsights.defaultClient, 'track');
-            http.createServer((req, res) => {
-                assert.equal(track.callCount, 0);
-                res.end();
-                assert.equal(track.callCount, 1);
-                done();
-            });
-
-            fakeHttpSrv.emitRequest("http://localhost:0/test");
-        });
-
-        it("should collect https request telemetry", (done) => {
-            var fakeHttpSrv = new fakeHttpServer();
-            sandbox.stub(https, 'createServer').callsFake((options: any, callback: (req: any, res: http.ServerResponse) => void) => {
-                fakeHttpSrv.setCallback(callback);
-                return fakeHttpSrv as any;
-            });
-
-            AppInsights
-                .setup("ikey")
-                .setAutoCollectRequests(true)
-                .start();
-
-            var track = sandbox.stub(AppInsights.defaultClient, 'track');
-            https.createServer(null, (req: unknown, res: http.ServerResponse) => {
-                assert.equal(track.callCount, 0);
-                res.end();
-                assert.equal(track.callCount, 1);
-                done();
-            });
-
-            fakeHttpSrv.emitRequest("http://localhost:0/test");
-        });
-
-        it("should collect http dependency telemetry", function (done) {
-            this.request.restore();
-            var eventEmitter = new EventEmitter();
-            (<any>eventEmitter).method = "GET";
-            sandbox.stub(http, 'request').callsFake((url: string, c: any) => {
-                process.nextTick(c);
-                return eventEmitter as any;
-            });
-
-            AppInsights
-                .setup("ikey")
-                .setAutoCollectDependencies(true)
-                .start();
-
-            var track = sandbox.stub(AppInsights.defaultClient, 'track');
-
-            http.request(<any>'http://test.com', (c) => {
-                assert.equal(track.callCount, 0);
-                eventEmitter.emit("response", {});
-                assert.equal(track.callCount, 1);
-                done();
-            });
-        });
-
-        it("should collect https dependency telemetry", function (done) {
-            this.request.restore();
-            var eventEmitter = new EventEmitter();
-            (<any>eventEmitter).method = "GET";
-            sandbox.stub(https, 'request').callsFake((url: string, c: any) => {
-                process.nextTick(c);
-                return eventEmitter as any;
-            });
-
-            AppInsights
-                .setup("ikey")
-                .setAutoCollectDependencies(true)
-                .start();
-
-            var track = sandbox.stub(AppInsights.defaultClient, 'track');
-
-            https.request(<any>'https://test.com', (c) => {
-                assert.equal(track.callCount, 0);
-                eventEmitter.emit("response", {});
-                assert.equal(track.callCount, 1);
-                done();
-            });
-        });
-    });
-
-    describe("W3C mode", () => {
-        var sandbox: sinon.SinonSandbox;
-
-        beforeEach(() => {
-            sandbox = sinon.sandbox.create();
-        });
-
-        afterEach(() => {
-            // Dispose the default app insights client and auto collectors so that they can be reconfigured
-            // cleanly for each test
-
-            // @todo: is this needed?
-            // CorrelationContextManager.reset();
-            AppInsights.dispose();
-            sandbox.restore();
-        });
-
-        // @todo: refactor this test
-        // it("should pass along traceparent/tracestate header if present in current operation", (done) => {
-        //     var eventEmitter = new EventEmitter();
-        //     (eventEmitter as any).headers = {};
-        //     (eventEmitter as any)["getHeader"] = function (name: string) { return this.headers[name]; };
-        //     (eventEmitter as any)["setHeader"] = function (name: string, value: string) { this.headers[name] = value; };
-        //     (<any>eventEmitter).method = "GET";
-        //     sandbox.stub(https, 'request').callsFake((url: string, c: any) => {
-        //         process.nextTick(c);
-        //         return eventEmitter as any;
-        //     });
-
-        //     AppInsights
-        //         .setup("ikey")
-        //         .setAutoCollectDependencies(true)
-        //         .start();
-
-        //     sandbox.stub(CorrelationContextManager, "getCurrentContext", () => ({
-        //         operation: {
-        //             traceparent: new Traceparent("00-5e84aff3af474588a42dcbf3bd1db95f-1fc066fb77fa43a3-00"),
-        //             tracestate: "sometracestate"
-        //         },
-        //         customProperties: {
-        //             serializeToHeader: (): null => null
-        //         }
-        //     }));
-        //     https.request(<any>'https://test.com', (c) => {
-        //         eventEmitter.emit("response", {});
-        //         assert.ok((eventEmitter as any).headers["request-id"].match(/^\|[0-z]{32}\.[0-z]{16}\./g));
-        //         assert.ok((eventEmitter as any).headers.traceparent.match(/^00-5e84aff3af474588a42dcbf3bd1db95f-[0-z]{16}-00$/));
-        //         assert.notEqual((eventEmitter as any).headers.traceparent, "00-5e84aff3af474588a42dcbf3bd1db95f-1fc066fb77fa43a3-00");
-        //         assert.equal((eventEmitter as any).headers.tracestate, "sometracestate");
-        //         AppInsights.defaultClient.flush();
-        //         done();
-        //     });
-        // });
-
-        // @todo: refactor this test
-    //     it("should create and pass a traceparent header if w3c is enabled", (done) => {
-    //         var CorrelationIdManager = require("../Library/CorrelationIdManager");
-
-    //         var eventEmitter = new EventEmitter();
-    //         (eventEmitter as any).headers = {};
-    //         (eventEmitter as any)["getHeader"] = function (name: string) { return this.headers[name]; };
-    //         (eventEmitter as any)["setHeader"] = function (name: string, value: string) { this.headers[name] = value; };
-    //         (<any>eventEmitter).method = "GET";
-    //         sandbox.stub(https, 'request').callsFake((url: string, c: any) => {
-    //             process.nextTick(c);
-    //             return eventEmitter as any;
-    //         });
-
-    //         AppInsights
-    //             .setup("ikey")
-    //             .setAutoCollectDependencies(true)
-    //             .start();
-
-    //         CorrelationIdManager.w3cEnabled = true;
-
-    //         sandbox.stub(CorrelationContextManager, "getCurrentContext", () => ({
-    //             operation: {
-    //             },
-    //             customProperties: {
-    //                 serializeToHeader: (): null => null
-    //             }
-    //         }));
-    //         https.request(<any>'https://test.com', (c) => {
-    //             eventEmitter.emit("response", {});
-    //             assert.ok((eventEmitter as any).headers.traceparent.match(/^00-[0-z]{32}-[0-z]{16}-[0-9a-f]{2}/g), "traceparent header is passed, 00-W3C-W3C-00");
-    //             assert.ok((eventEmitter as any).headers["request-id"].match(/^\|[0-z]{32}\.[0-z]{16}\./g), "back compat header is also passed, |W3C.W3C." + (eventEmitter as any).headers["request-id"]);
-    //             CorrelationIdManager.w3cEnabled = false;
-    //             AppInsights.defaultClient.flush();
-    //             done();
-    //         });
-    //     });
     });
 
     describe("Disk retry mode", () => {

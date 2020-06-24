@@ -2,8 +2,10 @@
   "name": "applicationinsights",
   "license": "MIT",
   "bugs": "https://github.com/Microsoft/ApplicationInsights-node.js/issues",
-  "version": "2.0.0",
-  "private": true,
+  "version": "2.0.0-beta.200707",
+  "publishConfig": {
+    "tag": "beta"
+  },
   "description": "Microsoft Application Insights module for Node.js",
   "repository": {
     "type": "git",
@@ -36,29 +38,28 @@
   ],
   "scripts": {
     "clean": "rm -rf ./out && rm -rf ./node_modules",
-    "build": "npm run build:deps && npm run build:compile",
-    "build:deps": "npm update --dev",
-    "build:compile": "tsc --project ./tsconfig.json",
+    "build": "npm run compile",
+    "compile": "tsc --project ./tsconfig.json",
     "prepublishOnly": "npm run build",
-    "test": "ts-mocha ./Tests/**/*.ts --recursive --no-exit",
-    "test:debug": "ts-mocha ./Tests/**/*.ts --inspect-brk --recursive --no-exit",
+    "test": "ts-mocha -p tsconfig.json './Tests/{**/*.ts, *.ts}' --recursive --no-exit",
+    "test:debug": "npm run test -- --inspect-brk",
     "functionaltest": "npm run build && npm pack && node --use_strict ./Tests/FunctionalTests/RunFunctionalTests.js",
     "backcompattest": "npm run build && npm pack && node --use_strict ./Tests/BackCompatibility/RunBackCompatTests.js"
   },
   "devDependencies": {
     "@types/mocha": "^7.0.2",
-    "@types/node": "^14.0.13",
+    "@types/node": "^14.0.19",
     "@types/sinon": "^9.0.4",
     "mocha": "^8.0.1",
-    "node-mocks-http": "^1.8.1",
     "sinon": "^9.0.2",
     "ts-mocha": "^7.0.0",
-    "typescript": "^3.9.5"
+    "typescript": "^3.9.6"
   },
   "dependencies": {
-    "@azure/monitor-opentelemetry-exporter": "^1.0.0-preview.2",
+    "@azure/monitor-opentelemetry-exporter": "^1.0.0-preview.4",
     "@opentelemetry/api": "^0.9.0",
     "@opentelemetry/context-async-hooks": "^0.9.0",
+    "@opentelemetry/context-base": "^0.9.0",
     "@opentelemetry/core": "^0.9.0",
     "@opentelemetry/node": "^0.9.0",
     "@opentelemetry/plugins-node-all": "^0.9.0",

@@ -291,8 +291,7 @@ class EnvelopeFactory {
         if (correlationContext) {
             newTags[context.keys.operationId] = newTags[context.keys.operationId] || correlationContext.traceId;
 
-            // @todo
-            // newTags[context.keys.operationName] = newTags[context.keys.operationName] || correlationContext.traceId;
+            newTags[context.keys.operationName] = newTags[context.keys.operationName] || correlationContext.traceId;
 
             newTags[context.keys.operationParentId] = newTags[context.keys.operationParentId] || correlationContext.spanId;
         }

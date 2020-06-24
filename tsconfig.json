@@ -13,7 +13,7 @@
         "Bootstrap/*.ts",
         "*.ts",
         "AutoCollection/diagnostic-channel/*.ts",
-        "Tests/**/*.ts",
+        "Tests/**/*.ts"
     ],
     "exclude": [
         "node_modules",

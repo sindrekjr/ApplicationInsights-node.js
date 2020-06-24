@@ -25,16 +25,24 @@ class Context {
     private _loadApplicationContext(packageJsonPath?: string) {
         // note: this should return the host package.json
         packageJsonPath = packageJsonPath || path.resolve(__dirname, "../../../../package.json");
+        const packageJsonPathTsNode = path.resolve(__dirname, "../../../package.json"); // path to read from if using ts-node
+
+        let packageJson: { version: string; } | null = null;
 
         if (!Context.appVersion[packageJsonPath]) {
             Context.appVersion[packageJsonPath] = "unknown";
             try {
-                let packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
-                if (packageJson && typeof packageJson.version === "string") {
-                    Context.appVersion[packageJsonPath] = packageJson.version;
+                packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
+            } catch (_e) {
+                try {
+                    packageJson = JSON.parse(fs.readFileSync(packageJsonPathTsNode, "utf8"));
+                } catch(exception) {
+                    Logging.info("unable to read app version:", exception);
                 }
-            } catch (exception) {
-                Logging.info("unable to read app version: ", exception);
+            }
+
+            if (packageJson && typeof packageJson.version === "string") {
+                Context.appVersion[packageJsonPath] = packageJson.version;
             }
         }
 
@@ -52,9 +60,30 @@ class Context {
         this.tags["ai.device.osPlatform"] = os && os.platform();
     }
 
-    private _loadInternalContext() {
-        // note: this should return the sdk package.json
-        Context.sdkVersion = "2.0.0";
+    private _loadInternalContext() {// note: this should return the sdk package.json
+        const packageJsonPath = path.resolve(__dirname, "../../package.json");
+        const packageJsonPathTsNode = path.resolve(__dirname, "../package.json");
+
+        let packageJson: { version: string; } | null = null;
+
+
+        if (!Context.sdkVersion) {
+            Context.sdkVersion = "unknown";
+            try {
+                packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
+            } catch (_e) {
+                try {
+                    packageJson = JSON.parse(fs.readFileSync(packageJsonPathTsNode, "utf8"))
+                } catch (exception) {
+                    Logging.info("unable to read sdk version: ", exception);
+                }
+            }
+
+            if (packageJson && typeof packageJson.version === "string") {
+                Context.sdkVersion = packageJson.version;
+            }
+        }
+
         this.tags[this.keys.internalSdkVersion] = "node:" + Context.sdkVersion;
     }
 }

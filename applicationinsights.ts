@@ -1,4 +1,4 @@
-import provider from "./Library/Provider";
+import Provider from "./Library/Provider";
 import AutoCollectConsole = require("./AutoCollection/Console");
 import AutoCollectExceptions = require("./AutoCollection/Exceptions");
 import AutoCollectPerformance = require("./AutoCollection/Performance");
@@ -11,6 +11,9 @@ import { AutoCollectNativePerformance, IDisabledExtendedMetrics } from "./AutoCo
 // They're exposed using "export import" so that types are passed along as expected
 export import TelemetryClient = require("./Library/TelemetryClient");
 export import Contracts = require("./Declarations/Contracts");
+import { LogLevel } from "@opentelemetry/core";
+import type { NodeTracerProvider } from "@opentelemetry/node";
+import type { Tracer } from "@opentelemetry/api";
 
 // Default autocollection configuration
 let _isConsole = true;
@@ -36,6 +39,8 @@ let _isStarted = false;
 * The default client, initialized when setup was called. To initialize a different client
 * with its own configuration, use `new TelemetryClient(instrumentationKey?)`.
 */
+export let provider: NodeTracerProvider;
+export let tracer: Tracer;
 export let defaultClient: TelemetryClient;
 export let liveMetricsClient: QuickPulseClient;
 let _performanceLiveMetrics: AutoCollectPerformance;
@@ -51,6 +56,9 @@ let _performanceLiveMetrics: AutoCollectPerformance;
  * and start the SDK.
  */
 export function setup(setupString?: string) {
+    if (!provider) {
+        // provider = Provider.setup();
+    }
     if(!defaultClient) {
         defaultClient = new TelemetryClient(setupString);
         _console = new AutoCollectConsole(defaultClient);
@@ -62,7 +70,6 @@ export function setup(setupString?: string) {
     } else {
         Logging.info("The default client is already setup");
     }
-
     if (defaultClient && defaultClient.channel) {
         defaultClient.channel.setUseDiskRetryCaching(_isDiskRetry, _diskRetryInterval, _diskRetryMaxBytes);
     }
@@ -77,6 +84,11 @@ export function setup(setupString?: string) {
  * @returns {ApplicationInsights} this class
  */
 export function start() {
+    if (!tracer) {
+        provider = Provider.start();
+        defaultClient.setupSpanExporter();
+        tracer = provider.getTracer("applicationinsights");
+    }
     if(!!defaultClient) {
         _isStarted = true;
         _console.enable(_isConsole, _isConsoleLog);
@@ -151,33 +163,45 @@ export class Configuration {
     }
 
     /**
+     * @deprecated Configure via OpenTelemetry
+     *
      * Sets the state of request tracking (enabled by default)
      * @param value if true requests will be sent to Application Insights
      * @returns {Configuration} this class
      */
     public static setAutoCollectRequests(value: boolean) {
-
+        Logging.warn(
+            "setAutoCollectRequests is deprecated. Please configure enable/disable HTTP tracking using @opentelemetry/plugin-http(s) plugins. This function setAutoCollectRequests(...) is now a No-op.",
+        );
+        Provider.enablePlugin("http", value);
+        Provider.enablePlugin("https", value);
         return Configuration;
     }
 
     /**
+     * @deprecated Configure via OpenTelemetry
+     *
      * Sets the state of dependency tracking (enabled by default)
      * @param value if true dependencies will be sent to Application Insights
      * @returns {Configuration} this class
      */
     public static setAutoCollectDependencies(value: boolean) {
-
+        Logging.warn(
+            "setAutoCollectDependencies is deprecated. Please configure enable/disable using @opentelemetry/plugin-http(s) plugins. This function setAutoCollectDependencies(...) is now a No-op.",
+        );
+        Provider.enablePlugin("http", value);
+        Provider.enablePlugin("https", value);
         return Configuration;
     }
 
     /**
+     * @deprecated Configure via OpenTelemetry
      * Sets the state of automatic dependency correlation (enabled by default)
      * @param value if true dependencies will be correlated with requests
-     * @param useAsyncHooks if true, forces use of experimental async_hooks module to provide correlation. If false, instead uses only patching-based techniques. If left blank, the best option is chosen for you based on your version of Node.js.
      * @returns {Configuration} this class
      */
-    public static setAutoDependencyCorrelation(value: boolean, useAsyncHooks?: boolean) {
-
+    public static setAutoDependencyCorrelation(value: boolean) {
+        Provider.enableCorrelation(value);
         return Configuration;
     }
 
@@ -209,7 +233,16 @@ export class Configuration {
      * @returns {Configuration} this class
      */
     public static setInternalLogging(enableDebugLogging = false, enableWarningLogging = true) {
-        // @todo
+        Provider.loggingLevel = enableDebugLogging ? LogLevel.DEBUG
+            : enableWarningLogging ? LogLevel.WARN
+            : LogLevel.ERROR;
+        return Configuration;
+    }
+
+    public static setDistributedTracingMode(mode: DistributedTracingModes) {
+        Logging.warn(
+            "setDistributedTracingMode(...) is deprecated. W3C Trace Context mode is enabled and legacy AI headers will no longer be parsed",
+        )
         return Configuration;
     }
 
@@ -245,6 +278,7 @@ export class Configuration {
 */
 export function dispose() {
     defaultClient = null;
+    Provider.dispose();
     _isStarted = false;
     if (_console) {
         _console.dispose();
@@ -263,7 +297,7 @@ export function dispose() {
         _isSendingLiveMetrics = false;
         liveMetricsClient = undefined;
     }
-    provider.stop();
+
 }
 
 export enum DistributedTracingModes {

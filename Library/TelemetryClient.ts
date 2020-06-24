@@ -44,21 +44,23 @@ class TelemetryClient {
 
         var sender = new Sender(this.config);
         this.channel = new Channel(() => config.disableAppInsights, () => config.maxBatchSize, () => config.maxBatchIntervalMs, sender);
+    }
 
+    public setupSpanExporter() {
         if (!TelemetryClient.tracer) {
-            Provider.addSpanProcessor(
+            Provider.instance.addSpanProcessor(
                 new tracing.BatchSpanProcessor(
                     new AzureMonitorTraceExporter({
-                        connectionString: setupString,
-                        instrumentationKey: setupString,
-                        logger: Provider.logger,
+                        connectionString: this.config.connectionString,
+                        instrumentationKey: this.config.instrumentationKey,
+                        logger: Provider.instance.logger,
                     }), {
-                        bufferTimeout: config.maxBatchIntervalMs,
-                        bufferSize: config.maxBatchSize,
+                        bufferTimeout: this.config.maxBatchIntervalMs,
+                        bufferSize: this.config.maxBatchSize,
                     }
                 ),
             );
-            this.tracer = TelemetryClient.tracer = Provider.getTracer("applicationinsights");
+            this.tracer = TelemetryClient.tracer = Provider.instance.getTracer("applicationinsights");
         }
     }
 
@@ -171,7 +173,7 @@ class TelemetryClient {
             // Ideally we would have a central place for "internal" telemetry processors and users can configure which ones are in use.
             // This will do for now. Otherwise clearTelemetryProcessors() would be problematic.
             accepted = accepted && TelemetryProcessors.samplingTelemetryProcessor(envelope, {
-                correlationContext: this.tracer.getCurrentSpan()?.context(),
+                correlationContext: this.tracer?.getCurrentSpan()?.context(),
             });
 
             if (accepted) {
@@ -210,7 +212,7 @@ class TelemetryClient {
         }
 
         contextObjects = contextObjects || {};
-        contextObjects['correlationContext'] = this.tracer.getCurrentSpan()?.context();
+        contextObjects['correlationContext'] = this.tracer?.getCurrentSpan()?.context();
 
         for (var i = 0; i < telemetryProcessorsCount; ++i) {
             try {

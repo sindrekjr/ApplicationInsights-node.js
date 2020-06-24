@@ -1,5 +1,3 @@
 import { SpanContext } from "@opentelemetry/api";
 
-export interface CorrelationContext extends SpanContext {
-
-}
+export type CorrelationContext = SpanContext;

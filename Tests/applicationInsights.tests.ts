@@ -9,18 +9,15 @@ describe("ApplicationInsights", () => {
         var Console = require("../AutoCollection/Console");
         var Exceptions = require("../AutoCollection/Exceptions");
         var Performance = require("../AutoCollection/Performance");
-        var HttpRequests = require("../AutoCollection/HttpRequests");
-        var HttpDependencies = require("../AutoCollection/HttpDependencies");
         beforeEach(() => {
             Console.INSTANCE = undefined;
             Exceptions.INSTANCE = undefined;
             Performance.INSTANCE = undefined;
-            HttpRequests.INSTANCE = undefined;
-            HttpDependencies.INSTANCE = undefined;
+            AppInsights.dispose();
         });
 
         it("should not warn if setup is called once", () => {
-            var warnStub = sinon.stub(console, "warn");
+            var warnStub = sinon.spy(console, "warn");
             AppInsights.defaultClient = undefined;
             AppInsights.setup("key");
             assert.ok(warnStub.notCalled, "warning was not raised");
@@ -28,7 +25,7 @@ describe("ApplicationInsights", () => {
         });
 
         it("should warn if setup is called twice", () => {
-            var warnStub = sinon.stub(console, "warn");
+            var warnStub = sinon.spy(console, "warn");
             AppInsights.defaultClient = undefined;
             AppInsights.setup("key");
             AppInsights.setup("key");
@@ -54,15 +51,11 @@ describe("ApplicationInsights", () => {
         var Console = require("../AutoCollection/Console");
         var Exceptions = require("../AutoCollection/Exceptions");
         var Performance = require("../AutoCollection/Performance");
-        var HttpRequests = require("../AutoCollection/HttpRequests");
-        var HttpDependencies = require("../AutoCollection/HttpDependencies");
 
         beforeEach(() => {
             Console.INSTANCE = undefined;
             Exceptions.INSTANCE = undefined;
             Performance.INSTANCE = undefined;
-            HttpRequests.INSTANCE = undefined;
-            HttpDependencies.INSTANCE = undefined;
         });
 
         afterEach(() => AppInsights.defaultClient = undefined);
@@ -103,20 +96,15 @@ describe("ApplicationInsights", () => {
             AppInsights.dispose();
         })
 
-        it("should enable AI tracing mode by default", () => {
+        it("should enable W3C tracing mode by default", () => {
             AppInsights.setup("key").start();
-            assert.equal(CorrelationIdManager.w3cEnabled, false);
+            assert.equal(CorrelationIdManager.w3cEnabled, true);
         });
 
-        it("should be able to enable W3C tracing mode via enum", () => {
-            AppInsights.setup("key").setDistributedTracingMode(DistributedTracingModes.AI_AND_W3C).start();
-            assert.ok(CorrelationIdManager.w3cEnabled);
-        });
-
-        it("should be able to enable W3C tracing mode via number", () => {
-            assert.equal(DistributedTracingModes.AI_AND_W3C, 1);
-            AppInsights.setup("key").setDistributedTracingMode(1).start();
-            assert.ok(CorrelationIdManager.w3cEnabled);
+        it("(backcompat) (no-op) should be able to enable W3C tracing mode via enum", () => {
+            assert.doesNotThrow(() => {
+                AppInsights.setup("key").setDistributedTracingMode(DistributedTracingModes.AI_AND_W3C).start();
+            });
         });
     });
 
@@ -125,16 +113,12 @@ describe("ApplicationInsights", () => {
         var Console = require("../AutoCollection/Console");
         var Exceptions = require("../AutoCollection/Exceptions");
         var Performance = require("../AutoCollection/Performance");
-        var HttpRequests = require("../AutoCollection/HttpRequests");
-        var HttpDependencies = require("../AutoCollection/HttpDependencies");
 
         beforeEach(() => {
             AppInsights.defaultClient = undefined;
             Console.INSTANCE = undefined;
             Exceptions.INSTANCE = undefined;
             Performance.INSTANCE = undefined;
-            HttpRequests.INSTANCE = undefined;
-            HttpDependencies.INSTANCE = undefined;
         });
 
         it("auto-collection is initialized by default", () => {
@@ -143,9 +127,6 @@ describe("ApplicationInsights", () => {
             //assert.ok(Console.INSTANCE.isInitialized());
             assert.ok(Exceptions.INSTANCE.isInitialized());
             assert.ok(Performance.INSTANCE.isInitialized());
-            assert.ok(HttpRequests.INSTANCE.isInitialized());
-            assert.ok(HttpRequests.INSTANCE.isAutoCorrelating());
-            assert.ok(HttpDependencies.INSTANCE.isInitialized());
         });
 
         it("auto-collection is not initialized if disabled before 'start'", () => {
@@ -161,9 +142,6 @@ describe("ApplicationInsights", () => {
             assert.ok(!Console.INSTANCE.isInitialized());
             assert.ok(!Exceptions.INSTANCE.isInitialized());
             assert.ok(!Performance.INSTANCE.isInitialized());
-            assert.ok(!HttpRequests.INSTANCE.isInitialized());
-            assert.ok(!HttpRequests.INSTANCE.isAutoCorrelating());
-            assert.ok(!HttpDependencies.INSTANCE.isInitialized());
         });
     });
 
@@ -173,61 +151,6 @@ describe("ApplicationInsights", () => {
 
         it("should provide access to severity levels", () => {
             assert.equal(AppInsights.Contracts.SeverityLevel.Information, Contracts.SeverityLevel.Information);
-        });
-    });
-
-    describe("#getCorrelationContext", () => {
-        var AppInsights = require("../applicationinsights");
-        var Contracts = require("../Declarations/Contracts");
-        var CCM = require("../AutoCollection/CorrelationContextManager").CorrelationContextManager;
-        var origGCC = CCM.getCurrentContext;
-
-        beforeEach(() => {
-            CCM.getCurrentContext = () => 'context';
-        });
-
-        afterEach(() => {
-            CCM.getCurrentContext = origGCC;
-            CCM.hasEverEnabled = false;
-            CCM.cls = undefined;
-            CCM.disable();
-            AppInsights.dispose();
-        });
-
-        it("should provide a context if correlating", () => {
-            AppInsights.setup("key")
-            .setAutoDependencyCorrelation(true)
-            .start();
-            assert.equal(AppInsights.getCorrelationContext(), 'context');
-        });
-
-        it("should provide a cls-hooked context if force flag set to true", () => {
-            if (CCM.canUseClsHooked()) {
-                AppInsights.setup("key")
-                .setAutoDependencyCorrelation(true, true)
-                .start();
-                assert.equal(AppInsights.getCorrelationContext(), 'context');
-                if (CCM.isNodeVersionCompatible()) {
-                    assert.equal(CCM.cls, require('cls-hooked'));
-                }
-            }
-        });
-
-        it("should provide a continuation-local-storage context if force flag set to false", () => {
-            AppInsights.setup("key")
-            .setAutoDependencyCorrelation(true, false)
-            .start();
-            assert.equal(AppInsights.getCorrelationContext(), 'context');
-            if (CCM.isNodeVersionCompatible()) {
-                assert.equal(CCM.cls, require('continuation-local-storage'));
-            }
-        });
-
-        it("should not provide a context if not correlating", () => {
-            AppInsights.setup("key")
-            .setAutoDependencyCorrelation(false)
-            .start();
-            assert.equal(AppInsights.getCorrelationContext(), null);
         });
     });
 });
