@@ -1,8 +1,7 @@
 import { Telemetry }  from "./Telemetry";
-import http = require("http");
-import https = require("https");
+import type * as http from "http";
 
-/** 
+/**
  * An interface describing the standard Node.js options parameter
  * for http requests.
  */

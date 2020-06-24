@@ -1,8 +1,6 @@
-import http = require("http");
 import os = require("os");
 
 import TelemetryClient = require("../Library/TelemetryClient");
-import Logging = require("../Library/Logging");
 import Constants = require("../Declarations/Constants");
 
 class AutoCollectPerformance {

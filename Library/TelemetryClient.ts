@@ -51,7 +51,11 @@ class TelemetryClient {
                     new AzureMonitorTraceExporter({
                         connectionString: setupString,
                         instrumentationKey: setupString,
-                    }),
+                        logger: Provider.logger,
+                    }), {
+                        bufferTimeout: config.maxBatchIntervalMs,
+                        bufferSize: config.maxBatchSize,
+                    }
                 ),
             );
             this.tracer = TelemetryClient.tracer = Provider.getTracer("applicationinsights");

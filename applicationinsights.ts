@@ -1,7 +1,7 @@
+import provider from "./Library/Provider";
 import AutoCollectConsole = require("./AutoCollection/Console");
 import AutoCollectExceptions = require("./AutoCollection/Exceptions");
 import AutoCollectPerformance = require("./AutoCollection/Performance");
-import CorrelationIdManager = require("./Library/CorrelationIdManager");
 import Logging = require("./Library/Logging");
 import QuickPulseClient = require("./Library/QuickPulseStateManager");
 
@@ -11,7 +11,6 @@ import { AutoCollectNativePerformance, IDisabledExtendedMetrics } from "./AutoCo
 // They're exposed using "export import" so that types are passed along as expected
 export import TelemetryClient = require("./Library/TelemetryClient");
 export import Contracts = require("./Declarations/Contracts");
-import provider from "./Library/Provider";
 
 // Default autocollection configuration
 let _isConsole = true;

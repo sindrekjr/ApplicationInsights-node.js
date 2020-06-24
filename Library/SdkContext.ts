@@ -1,5 +1,4 @@
 ﻿import os = require("os");
-import http = require("http");
 import fs = require("fs");
 import path = require("path");
 
