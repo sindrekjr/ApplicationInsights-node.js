@@ -4,6 +4,7 @@ import AutoCollectExceptions = require("./AutoCollection/Exceptions");
 import AutoCollectPerformance = require("./AutoCollection/Performance");
 import Logging = require("./Library/Logging");
 import QuickPulseClient = require("./Library/QuickPulseStateManager");
+import * as azureFunctionsTypes from "./Library/Functions";
 
 import { AutoCollectNativePerformance, IDisabledExtendedMetrics } from "./AutoCollection/NativePerformance";
 
@@ -14,6 +15,21 @@ export import Contracts = require("./Declarations/Contracts");
 import { LogLevel } from "@opentelemetry/core";
 import type { NodeTracerProvider } from "@opentelemetry/node";
 import type { Tracer } from "@opentelemetry/api";
+import { IncomingMessage } from "http";
+import { CorrelationContextManager } from "./AutoCollection/CorrelationContextManager";
+
+export enum DistributedTracingModes {
+    /**
+     * (Default) Send Application Insights correlation headers
+     */
+
+    AI=0,
+
+    /**
+     * Send both W3C Trace Context headers and back-compatibility Application Insights headers
+     */
+    AI_AND_W3C
+}
 
 // Default autocollection configuration
 let _isConsole = true;
@@ -103,6 +119,47 @@ export function start() {
     }
 
     return Configuration;
+}
+
+/**
+ * Returns an object that is shared across all code handling a given request.
+ * This can be used similarly to thread-local storage in other languages.
+ * Properties set on this object will be available to telemetry processors.
+ *
+ * Do not store sensitive information here.
+ * Custom properties set on this object can be exposed in a future SDK
+ * release via outgoing HTTP headers.
+ * This is to allow for correlating data cross-component.
+ *
+ * This method will return null if automatic dependency correlation is disabled.
+ * @returns A plain object for request storage or null if automatic dependency correlation is disabled.
+ */
+export function getCorrelationContext(): CorrelationContextManager.CorrelationContext {
+    if (_isCorrelating) {
+        return CorrelationContextManager.CorrelationContextManager.getCurrentContext();
+    }
+
+    return null;
+}
+
+/**
+ * **(Experimental!)**
+ * Starts a fresh context or propagates the current internal one.
+ */
+export function startOperation(context: azureFunctionsTypes.Context, request: azureFunctionsTypes.HttpRequest): CorrelationContextManager.CorrelationContext | null;
+export function startOperation(context: IncomingMessage | azureFunctionsTypes.HttpRequest, request?: never): CorrelationContextManager.CorrelationContext | null;
+export function startOperation(context: azureFunctionsTypes.Context | (IncomingMessage | azureFunctionsTypes.HttpRequest), request?: azureFunctionsTypes.HttpRequest): CorrelationContextManager.CorrelationContext | null {
+    return CorrelationContextManager.CorrelationContextManager.startOperation(context, request);
+}
+
+/**
+ * Returns a function that will get the same correlation context within its
+ * function body as the code executing this function.
+ * Use this method if automatic dependency correlation is not propagating
+ * correctly to an asynchronous callback.
+ */
+export function wrapWithCorrelationContext<T extends Function>(fn: T, context?: CorrelationContextManager.CorrelationContext): T {
+    return CorrelationContextManager.CorrelationContextManager.wrapCallback(fn, context);
 }
 
 /**

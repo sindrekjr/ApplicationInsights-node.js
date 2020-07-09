@@ -7,6 +7,7 @@ import Logging = require("./Logging");
 import Config = require("./Config");
 import TelemetryClient = require("../Library/TelemetryClient");
 import RequestResponseHeaders = require("./RequestResponseHeaders");
+import { HttpRequest } from "../Library/Functions";
 
 
 class Util {
