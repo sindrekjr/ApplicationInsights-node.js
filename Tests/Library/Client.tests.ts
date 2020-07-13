@@ -11,6 +11,43 @@ import Contracts = require("../../Declarations/Contracts");
 import RequestResponseHeaders = require("../../Library/RequestResponseHeaders");
 import Util = require("../../Library/Util");
 import EnvelopeFactory = require("../../Library/EnvelopeFactory");
+import { SpanProcessor, Span, ReadableSpan } from "@opentelemetry/tracing";
+import Provider from "../../Library/Provider";
+import { timeInputToHrTime, hrTimeToMilliseconds } from "@opentelemetry/core";
+import type { HrTime } from "@opentelemetry/api";
+import * as conventions from "@opentelemetry/semantic-conventions";
+
+const NANOSECOND_DIGITS = 9;
+const SECOND_TO_NANOSECONDS = Math.pow(10, NANOSECOND_DIGITS);
+
+function numberToHrtime(epochMillis: number): HrTime {
+    const epochSeconds = epochMillis / 1000;
+    // Decimals only.
+    const seconds = Math.trunc(epochSeconds);
+    // Round sub-nanosecond accuracy to nanosecond.
+    const nanos =
+      Number((epochSeconds - seconds).toFixed(NANOSECOND_DIGITS)) *
+      SECOND_TO_NANOSECONDS;
+    return [seconds, nanos];
+  }
+
+class TestSpanProcessor implements SpanProcessor {
+    exportedSpans: ReadableSpan[] = [];
+
+    forceFlush(): void {
+        // no op
+    }
+    onStart(span: ReadableSpan): void {
+        // no op
+    }
+    onEnd(span: ReadableSpan): void {
+        this.exportedSpans.push(span);
+    }
+    shutdown(): void {
+        this.exportedSpans = [];
+    }
+
+}
 
 describe("Library/TelemetryClient", () => {
 
@@ -18,6 +55,8 @@ describe("Library/TelemetryClient", () => {
     var appId = "Application-Key-12345-6789A";
     var name = "name";
     var value = 3;
+    const startTime = new Date();
+    const memoryExporter = new TestSpanProcessor();
     var testEventTelemetry = <Contracts.EventTelemetry>{ name: "testEvent" };
     var properties: { [key: string]: string; } = { p1: "p1", p2: "p2", common: "commonArg" };
     var failedProperties: { [key: string]: string; } = { p1: "p1", p2: "p2", common: "commonArg", errorProp: "errorVal" };
@@ -28,18 +67,23 @@ describe("Library/TelemetryClient", () => {
     var triggerStub: Sinon.SinonStub;
     var sendStub: Sinon.SinonStub;
     var saveOnCrashStub: Sinon.SinonStub;
+    let getSpanProcessorStub: Sinon.SinonStub;
+
 
     before(() => {
+        getSpanProcessorStub = sinon.stub(Provider.tracer, "getActiveSpanProcessor").returns(memoryExporter);
         trackStub = sinon.stub(client, "track");
         triggerStub = sinon.stub(client.channel, "triggerSend");
         sendStub = sinon.stub(client.channel, "send");
         saveOnCrashStub = sinon.stub(client.channel._sender, "saveOnCrash");
     });
     after(() => {
+        getSpanProcessorStub.restore();
         trackStub.restore();
         triggerStub.restore();
         sendStub.restore();
         saveOnCrashStub.restore();
+        Provider.dispose();
 
     });
 
@@ -47,6 +91,7 @@ describe("Library/TelemetryClient", () => {
         sendStub.reset();
         client.clearTelemetryProcessors();
         saveOnCrashStub.reset();
+        memoryExporter.shutdown(); // reset
     })
 
     var invalidInputHelper = (name: string) => {
@@ -261,186 +306,47 @@ describe("Library/TelemetryClient", () => {
     });
 
     describe("#trackDependency()", () => {
-        it("should create envelope with correct properties", () => {
-            trackStub.restore();
-            var commandName = "http://bing.com/search?q=test";
+        it("should create span with correct properties", () => {
+            var data = "http://bing.com/search?q=test";
             var dependencyTypeName = "dependencyTypeName";
-            var createEnvelopeSpy = sinon.spy(EnvelopeFactory, "createEnvelope");
-            client.trackDependency({ name: name, data: commandName, duration: value, success: true, resultCode: "0", dependencyTypeName: dependencyTypeName, properties: properties });
-            assert.ok(createEnvelopeSpy.calledOnce);
+            client.trackDependency({ name: name, data: data, duration: value, success: true, resultCode: 200, dependencyTypeName: dependencyTypeName, properties: properties, time: startTime });
+            assert.strictEqual(memoryExporter.exportedSpans.length, 1);
 
+            const span = memoryExporter.exportedSpans[0];
 
-            var envelopeCreated = createEnvelopeSpy.firstCall.returnValue;
-            var obj0 = <Contracts.Data<Contracts.RemoteDependencyData>>envelopeCreated.data;
-            createEnvelopeSpy.restore();
+            assert.strictEqual(span.name, name);
+            assert.deepStrictEqual(hrTimeToMilliseconds(span.duration), value);
+            assert.deepStrictEqual(span.startTime, timeInputToHrTime(startTime.getTime()));
+            assert.deepStrictEqual(span.endTime, numberToHrtime(startTime.getTime() + value));
+            assert.deepStrictEqual(span.ended, true);
 
-            assert.equal(obj0.baseData.name, name);
-            assert.equal(obj0.baseData.data, commandName);
-            assert.equal(obj0.baseData.target, 'bing.com');
-            assert.equal(obj0.baseData.duration, Util.msToTimeSpan(value));
-            assert.equal(obj0.baseData.success, true);
-            assert.equal(obj0.baseData.type, dependencyTypeName);
-            assert.deepEqual(obj0.baseData.properties, properties);
-        });
-
-        it("should create envelope with correct properties (numeric result code)", () => {
-            trackStub.restore();
-            var commandName = "http://bing.com/search?q=test";
-            var dependencyTypeName = "dependencyTypeName";
-            var createEnvelopeSpy = sinon.spy(EnvelopeFactory, "createEnvelope");
-            client.trackDependency({ name: name, data: commandName, duration: value, success: true, resultCode: 0, dependencyTypeName: dependencyTypeName, properties: properties });
-            assert.ok(createEnvelopeSpy.calledOnce);
-
-
-            var envelopeCreated = createEnvelopeSpy.firstCall.returnValue;
-            var obj0 = <Contracts.Data<Contracts.RemoteDependencyData>>envelopeCreated.data;
-            createEnvelopeSpy.restore();
-
-            assert.equal(obj0.baseData.name, name);
-            assert.equal(obj0.baseData.data, commandName);
-            assert.equal(obj0.baseData.target, 'bing.com');
-            assert.equal(obj0.baseData.duration, Util.msToTimeSpan(value));
-            assert.equal(obj0.baseData.success, true);
-            assert.equal(obj0.baseData.type, dependencyTypeName);
-            assert.deepEqual(obj0.baseData.properties, properties);
-        });
-
-        it("should process the id when specified", () => {
-            trackStub.restore();
-            var commandName = "http://bing.com/search?q=test";
-            var dependencyTypeName = "dependencyTypeName";
-            var createEnvelopeSpy = sinon.spy(EnvelopeFactory, "createEnvelope");
-            client.trackDependency(<Contracts.DependencyTelemetry & Contracts.Identified>{ id: "testid", name: name, data: commandName, duration: value, success: true, resultCode: "0", dependencyTypeName: dependencyTypeName, properties: properties });
-            assert.ok(createEnvelopeSpy.calledOnce);
-
-
-            var envelopeCreated = createEnvelopeSpy.firstCall.returnValue;
-            var obj0 = <Contracts.Data<Contracts.RemoteDependencyData>>envelopeCreated.data;
-            createEnvelopeSpy.restore();
-            assert.equal(obj0.baseData.id, "testid");
-            assert.deepEqual(obj0.baseData.properties, properties);
-        });
-
-        it("should auto-generate the id when not specified", () => {
-            trackStub.restore();
-            var commandName = "http://bing.com/search?q=test";
-            var dependencyTypeName = "dependencyTypeName";
-            var createEnvelopeSpy = sinon.spy(EnvelopeFactory, "createEnvelope");
-            client.trackDependency(<Contracts.DependencyTelemetry>{ name: name, data: commandName, duration: value, success: true, resultCode: "0", dependencyTypeName: dependencyTypeName, properties: properties });
-            assert.ok(createEnvelopeSpy.calledOnce);
-
-
-            var envelopeCreated = createEnvelopeSpy.firstCall.returnValue;
-            var obj0 = <Contracts.Data<Contracts.RemoteDependencyData>>envelopeCreated.data;
-            createEnvelopeSpy.restore();
-            assert.ok(!!obj0.baseData.id);
-            assert.deepEqual(obj0.baseData.properties, properties);
-        });
-
-        it("should autopopulate target field for url data", () => {
-            trackStub.restore();
-            var commandName = "http://bing.com/search?q=test";
-            var dependencyTypeName = "dependencyTypeName";
-            var createEnvelopeSpy = sinon.spy(EnvelopeFactory, "createEnvelope");
-            client.trackDependency(<Contracts.DependencyTelemetry>{ name: name, data: commandName, duration: value, success: true, resultCode: "0", dependencyTypeName: dependencyTypeName, properties: properties });
-            assert.ok(createEnvelopeSpy.calledOnce);
-
-
-            var envelopeCreated = createEnvelopeSpy.firstCall.returnValue;
-            var obj0 = <Contracts.Data<Contracts.RemoteDependencyData>>envelopeCreated.data;
-            createEnvelopeSpy.restore();
-            assert.equal(obj0.baseData.target, "bing.com");
-        });
-
-        it("should not autopopulate target field for non-url data", () => {
-            trackStub.restore();
-            var commandName = "NOT A URL";
-            var dependencyTypeName = "dependencyTypeName";
-            var createEnvelopeSpy = sinon.spy(EnvelopeFactory, "createEnvelope");
-            client.trackDependency(<Contracts.DependencyTelemetry>{ name: name, data: commandName, duration: value, success: true, resultCode: "0", dependencyTypeName: dependencyTypeName, properties: properties });
-            assert.ok(createEnvelopeSpy.calledOnce);
-
-
-            var envelopeCreated = createEnvelopeSpy.firstCall.returnValue;
-            var obj0 = <Contracts.Data<Contracts.RemoteDependencyData>>envelopeCreated.data;
-            createEnvelopeSpy.restore();
-            assert.equal(obj0.baseData.target, null);
+            assert.deepStrictEqual(span.attributes, {
+                ...properties,
+                [conventions.GeneralAttribute.NET_PEER_ADDRESS]: data,
+                [conventions.HttpAttribute.HTTP_STATUS_CODE]: 200,
+            });
         });
     });
 
     describe("#trackRequest()", () => {
-        it("should create envelope with correct properties", () => {
-            trackStub.restore();
+        it("should create span with correct properties", () => {
             var url = "http://bing.com/search?q=test";
-            var createEnvelopeSpy = sinon.spy(EnvelopeFactory, "createEnvelope");
-            client.trackRequest({ url: url, source: "source", name: name, duration: value, success: true, resultCode: "200", properties: properties });
-            assert.ok(createEnvelopeSpy.calledOnce);
+            client.trackRequest({ url: url, source: "source", name: name, duration: value, success: true, resultCode: 200, properties: properties, time: startTime });
+            assert.strictEqual(memoryExporter.exportedSpans.length, 1);
 
+            const span = memoryExporter.exportedSpans[0];
 
-            var envelopeCreated = createEnvelopeSpy.firstCall.returnValue;
-            var obj0 = <Contracts.Data<Contracts.RequestData>>envelopeCreated.data;
-            createEnvelopeSpy.restore();
+            assert.strictEqual(span.name, name);
+            assert.deepStrictEqual(hrTimeToMilliseconds(span.duration), value);
+            assert.deepStrictEqual(span.startTime, timeInputToHrTime(startTime.getTime()));
+            assert.deepStrictEqual(span.endTime, numberToHrtime(startTime.getTime() + value));
+            assert.deepStrictEqual(span.ended, true);
 
-            assert.equal(obj0.baseData.name, name);
-            assert.equal(obj0.baseData.url, url);
-            assert.equal(obj0.baseData.source, 'source');
-            assert.equal(obj0.baseData.duration, Util.msToTimeSpan(value));
-            assert.equal(obj0.baseData.success, true);
-            assert.equal(obj0.baseData.responseCode, "200");
-            assert.deepEqual(obj0.baseData.properties, properties);
-        });
-
-        it("should create envelope with correct properties (numeric resultCode)", () => {
-            trackStub.restore();
-            var url = "http://bing.com/search?q=test";
-            var createEnvelopeSpy = sinon.spy(EnvelopeFactory, "createEnvelope");
-            client.trackRequest({ url: url, source: "source", name: name, duration: value, success: true, resultCode: 200, properties: properties });
-            assert.ok(createEnvelopeSpy.calledOnce);
-
-
-            var envelopeCreated = createEnvelopeSpy.firstCall.returnValue;
-            var obj0 = <Contracts.Data<Contracts.RequestData>>envelopeCreated.data;
-            createEnvelopeSpy.restore();
-
-            assert.equal(obj0.baseData.name, name);
-            assert.equal(obj0.baseData.url, url);
-            assert.equal(obj0.baseData.source, 'source');
-            assert.equal(obj0.baseData.duration, Util.msToTimeSpan(value));
-            assert.equal(obj0.baseData.success, true);
-            assert.equal(obj0.baseData.responseCode, "200");
-            assert.deepEqual(obj0.baseData.properties, properties);
-        });
-
-        it("should process the id when specified", () => {
-            trackStub.restore();
-            var url = "http://bing.com/search?q=test";
-            var createEnvelopeSpy = sinon.spy(EnvelopeFactory, "createEnvelope");
-            client.trackRequest(<Contracts.RequestTelemetry & Contracts.Identified>{ id: "testid", url: url, source: "source", name: name, duration: value, success: true, resultCode: "200", properties: properties });
-            assert.ok(createEnvelopeSpy.calledOnce);
-
-
-            var envelopeCreated = createEnvelopeSpy.firstCall.returnValue;
-            var obj0 = <Contracts.Data<Contracts.RequestData>>envelopeCreated.data;
-            createEnvelopeSpy.restore();
-
-            assert.equal(obj0.baseData.id, "testid");
-            assert.deepEqual(obj0.baseData.properties, properties);
-        });
-
-        it("should auto-generate the id when not specified", () => {
-            trackStub.restore();
-            var url = "http://bing.com/search?q=test";
-            var createEnvelopeSpy = sinon.spy(EnvelopeFactory, "createEnvelope");
-            client.trackRequest({ url: url, source: "source", name: name, duration: value, success: true, resultCode: "200", properties: properties });
-            assert.ok(createEnvelopeSpy.calledOnce);
-
-
-            var envelopeCreated = createEnvelopeSpy.firstCall.returnValue;
-            var obj0 = <Contracts.Data<Contracts.RequestData>>envelopeCreated.data;
-            createEnvelopeSpy.restore();
-
-            assert.ok(!!obj0.baseData.id);
-            assert.deepEqual(obj0.baseData.properties, properties);
+            assert.deepStrictEqual(span.attributes, {
+                ...properties,
+                [conventions.GeneralAttribute.NET_PEER_ADDRESS]: url,
+                [conventions.HttpAttribute.HTTP_STATUS_CODE]: 200,
+            });
         });
     });
 

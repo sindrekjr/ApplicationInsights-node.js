@@ -1,9 +1,11 @@
 import { LogLevel, ConsoleLogger } from "@opentelemetry/core";
 import { NodeTracerProvider } from "@opentelemetry/node";
 import { NoopContextManager, ContextManager } from "@opentelemetry/context-base";
+import * as opentelemetry from "@opentelemetry/api";
 
 import { DEFAULT_INSTRUMENTATION_PLUGINS } from "@opentelemetry/node/build/src/config";
 import type { Plugins } from "@opentelemetry/node/build/src/instrumentation/PluginLoader";
+import { Tracer } from "@opentelemetry/tracing";
 
 export default class Provider {
 
@@ -19,6 +21,10 @@ export default class Provider {
 
   static set loggingLevel(logLevel: LogLevel) {
     this._logLevel = logLevel;
+  }
+
+  static get tracer(): Tracer {
+    return opentelemetry.trace.getTracer("applicationinsights") as Tracer;
   }
 
   static enablePlugin(module: string, enabled: boolean): Provider {
@@ -49,7 +55,6 @@ export default class Provider {
       plugins: this.config,
     });
 
-
     this._instance.register({
       contextManager: this._contextManager,
     });
@@ -59,8 +64,10 @@ export default class Provider {
 
   static dispose(): void {
     if (this._instance) {
+      (this._instance as any)["_registeredSpanProcessors"] = null;
       this._instance.stop();
       this._instance = null;
+    } else {
     }
   }
 }

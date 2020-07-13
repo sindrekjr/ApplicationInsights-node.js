@@ -192,8 +192,10 @@ describe("EndToEnd", () => {
         var mkdir: sinon.SinonStub;
         var spawn: sinon.SinonStub;
         var spawnSync: sinon.SinonStub;
+        let setupSpanExporterStub: sinon.SinonStub;
 
         beforeEach(function () {
+            setupSpanExporterStub = sinon.stub(AppInsights.TelemetryClient.prototype, "setupSpanExporter");
             AppInsights.defaultClient = undefined;
             cidStub = sinon.stub(CorrelationIdManager, 'queryCorrelationId'); // TODO: Fix method of stubbing requests to allow CID to be part of E2E tests
             this.request = sinon.stub(https, 'request');
@@ -229,6 +231,7 @@ describe("EndToEnd", () => {
         });
 
         afterEach(function () {
+            setupSpanExporterStub.restore();
             cidStub.restore();
             this.request.restore();
             writeFile.restore();

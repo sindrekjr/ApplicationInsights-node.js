@@ -4,7 +4,6 @@ import AutoCollectExceptions = require("./AutoCollection/Exceptions");
 import AutoCollectPerformance = require("./AutoCollection/Performance");
 import Logging = require("./Library/Logging");
 import QuickPulseClient = require("./Library/QuickPulseStateManager");
-import * as azureFunctionsTypes from "./Library/Functions";
 
 import { AutoCollectNativePerformance, IDisabledExtendedMetrics } from "./AutoCollection/NativePerformance";
 
@@ -12,11 +11,14 @@ import { AutoCollectNativePerformance, IDisabledExtendedMetrics } from "./AutoCo
 // They're exposed using "export import" so that types are passed along as expected
 export import TelemetryClient = require("./Library/TelemetryClient");
 export import Contracts = require("./Declarations/Contracts");
-import { LogLevel } from "@opentelemetry/core";
+import { LogLevel, parseTraceParent } from "@opentelemetry/core";
+
+import type * as azureFunctionsTypes from "./Library/Functions";
 import type { NodeTracerProvider } from "@opentelemetry/node";
-import type { Tracer } from "@opentelemetry/api";
-import { IncomingMessage } from "http";
-import { CorrelationContextManager } from "./AutoCollection/CorrelationContextManager";
+import type { Tracer, SpanContext } from "@opentelemetry/api";
+import type { IncomingMessage } from "http";
+import type { CorrelationContext } from "./Library/CorrelationContext";
+import type { Span } from "@opentelemetry/tracing";
 
 export enum DistributedTracingModes {
     /**
@@ -72,9 +74,6 @@ let _performanceLiveMetrics: AutoCollectPerformance;
  * and start the SDK.
  */
 export function setup(setupString?: string) {
-    if (!provider) {
-        // provider = Provider.setup();
-    }
     if(!defaultClient) {
         defaultClient = new TelemetryClient(setupString);
         _console = new AutoCollectConsole(defaultClient);
@@ -134,22 +133,25 @@ export function start() {
  * This method will return null if automatic dependency correlation is disabled.
  * @returns A plain object for request storage or null if automatic dependency correlation is disabled.
  */
-export function getCorrelationContext(): CorrelationContextManager.CorrelationContext {
-    if (_isCorrelating) {
-        return CorrelationContextManager.CorrelationContextManager.getCurrentContext();
-    }
-
-    return null;
+export function getCorrelationContext(): CorrelationContext | null {
+    return Provider.tracer.getCurrentSpan()?.context() ?? null;
 }
 
 /**
  * **(Experimental!)**
  * Starts a fresh context or propagates the current internal one.
  */
-export function startOperation(context: azureFunctionsTypes.Context, request: azureFunctionsTypes.HttpRequest): CorrelationContextManager.CorrelationContext | null;
-export function startOperation(context: IncomingMessage | azureFunctionsTypes.HttpRequest, request?: never): CorrelationContextManager.CorrelationContext | null;
-export function startOperation(context: azureFunctionsTypes.Context | (IncomingMessage | azureFunctionsTypes.HttpRequest), request?: azureFunctionsTypes.HttpRequest): CorrelationContextManager.CorrelationContext | null {
-    return CorrelationContextManager.CorrelationContextManager.startOperation(context, request);
+export function startOperation(context: azureFunctionsTypes.Context | (IncomingMessage | azureFunctionsTypes.HttpRequest)): CorrelationContext | null {
+    const traceContext = (context as azureFunctionsTypes.Context)?.traceContext ?? null;
+    const traceparentHeader = (context as azureFunctionsTypes.HttpRequest).headers?.traceparent;
+    let spanContext: SpanContext;
+    if (traceContext) {
+        spanContext = parseTraceParent(traceContext.traceparent);
+    } else {
+        spanContext = traceparentHeader ? parseTraceParent(traceparentHeader) : null;
+    }
+
+    return spanContext;
 }
 
 /**
@@ -158,8 +160,8 @@ export function startOperation(context: azureFunctionsTypes.Context | (IncomingM
  * Use this method if automatic dependency correlation is not propagating
  * correctly to an asynchronous callback.
  */
-export function wrapWithCorrelationContext<T extends Function>(fn: T, context?: CorrelationContextManager.CorrelationContext): T {
-    return CorrelationContextManager.CorrelationContextManager.wrapCallback(fn, context);
+export function wrapWithCorrelationContext<T extends Function>(fn: T, context?: Span): T {
+    return Provider.tracer.bind(fn, context);
 }
 
 /**
@@ -356,8 +358,3 @@ export function dispose() {
     }
 
 }
-
-export enum DistributedTracingModes {
-    AI=0,
-    AI_AND_W3C,
-};

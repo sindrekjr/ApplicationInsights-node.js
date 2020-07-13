@@ -1,6 +1,5 @@
 import Provider from './Provider';
 import url = require("url");
-import os = require("os");
 
 import Config = require("./Config");
 import Context = require("./SdkContext");
@@ -16,6 +15,7 @@ import QuickPulseStateManager = require("./QuickPulseStateManager");
 import * as opentelemetry from '@opentelemetry/api';
 import * as tracing from '@opentelemetry/tracing';
 import { AzureMonitorTraceExporter } from '@azure/monitor-opentelemetry-exporter';
+import * as conventions from '@opentelemetry/semantic-conventions';
 
 /**
  * Application Insights telemetry client provides interface to track telemetry items, register telemetry initializers and
@@ -29,8 +29,8 @@ class TelemetryClient {
     public commonProperties: { [key: string]: string; };
     public channel: Channel;
     public quickPulseClient: QuickPulseStateManager;
-    public static tracer: opentelemetry.Tracer;
-    public tracer = TelemetryClient.tracer;
+
+    private static _azureExporterSetup = false;
 
     /**
      * Constructs a new client of the client
@@ -47,7 +47,7 @@ class TelemetryClient {
     }
 
     public setupSpanExporter() {
-        if (!TelemetryClient.tracer) {
+        if (!TelemetryClient._azureExporterSetup) {
             Provider.instance.addSpanProcessor(
                 new tracing.BatchSpanProcessor(
                     new AzureMonitorTraceExporter({
@@ -60,7 +60,9 @@ class TelemetryClient {
                     }
                 ),
             );
-            this.tracer = TelemetryClient.tracer = Provider.instance.getTracer("applicationinsights");
+            TelemetryClient._azureExporterSetup = true;
+        } else {
+            Logging.warn("TelemetryClient.setupSpanExporter() was called multiple times. Ignoring this call");
         }
     }
 
@@ -124,7 +126,22 @@ class TelemetryClient {
      * @param telemetry      Object encapsulating tracking options
      */
     public trackRequest(telemetry: Contracts.RequestTelemetry & Contracts.Identified): void {
-        this.track(telemetry, Contracts.TelemetryType.Request);
+        const startTime = telemetry.time?.getTime() ?? Date.now() - telemetry.duration;
+        const span = Provider.tracer.startSpan(telemetry.name, {
+            parent: Provider.tracer.getCurrentSpan(),
+            kind: opentelemetry.SpanKind.SERVER,
+            startTime,
+            attributes: {
+                ...telemetry.properties,
+                [conventions.GeneralAttribute.NET_PEER_ADDRESS]: telemetry.url,
+                [conventions.HttpAttribute.HTTP_STATUS_CODE]: telemetry.resultCode,
+            },
+        });
+        span.setStatus({
+            code: telemetry.success ? opentelemetry.CanonicalCode.OK : opentelemetry.CanonicalCode.UNKNOWN,
+        });
+
+        span.end(startTime + telemetry.duration);
     }
 
     /**
@@ -141,7 +158,22 @@ class TelemetryClient {
             // If this logic is moved, update jsdoc in DependencyTelemetry.target
             telemetry.target = url.parse(telemetry.data).host;
         }
-        this.track(telemetry, Contracts.TelemetryType.Dependency);
+        const startTime = telemetry.time?.getTime() ?? Date.now() - telemetry.duration;
+        const span = Provider.tracer.startSpan(telemetry.name, {
+            parent: Provider.tracer.getCurrentSpan(),
+            kind: opentelemetry.SpanKind.SERVER,
+            startTime,
+            attributes: {
+                ...telemetry.properties,
+                [conventions.GeneralAttribute.NET_PEER_ADDRESS]: telemetry.data,
+                [conventions.HttpAttribute.HTTP_STATUS_CODE]: telemetry.resultCode,
+            },
+        });
+        span.setStatus({
+            code: telemetry.success ? opentelemetry.CanonicalCode.OK : opentelemetry.CanonicalCode.UNKNOWN,
+        });
+
+        span.end(startTime + telemetry.duration);
     }
 
     /**
@@ -173,7 +205,7 @@ class TelemetryClient {
             // Ideally we would have a central place for "internal" telemetry processors and users can configure which ones are in use.
             // This will do for now. Otherwise clearTelemetryProcessors() would be problematic.
             accepted = accepted && TelemetryProcessors.samplingTelemetryProcessor(envelope, {
-                correlationContext: this.tracer?.getCurrentSpan()?.context(),
+                correlationContext: Provider.tracer?.getCurrentSpan()?.context(),
             });
 
             if (accepted) {
@@ -212,7 +244,7 @@ class TelemetryClient {
         }
 
         contextObjects = contextObjects || {};
-        contextObjects['correlationContext'] = this.tracer?.getCurrentSpan()?.context();
+        contextObjects['correlationContext'] = Provider.tracer?.getCurrentSpan()?.context();
 
         for (var i = 0; i < telemetryProcessorsCount; ++i) {
             try {

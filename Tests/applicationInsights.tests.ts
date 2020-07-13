@@ -1,8 +1,19 @@
 import assert = require("assert");
 import sinon = require("sinon");
 import { DistributedTracingModes } from "../applicationinsights";
+import appInsights = require("../Bootstrap/Oryx");
+import TelemetryClient = require("../Library/TelemetryClient");
 
 describe("ApplicationInsights", () => {
+    let setupSpanExporterStub: sinon.SinonStub;
+
+    before(() => {
+        setupSpanExporterStub = sinon.stub(TelemetryClient.prototype, "setupSpanExporter");
+    });
+
+    after(() => {
+        setupSpanExporterStub.restore();
+    })
 
     describe("#setup()", () => {
         var AppInsights = require("../applicationinsights");
