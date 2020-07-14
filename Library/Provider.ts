@@ -6,6 +6,22 @@ import * as opentelemetry from "@opentelemetry/api";
 import { DEFAULT_INSTRUMENTATION_PLUGINS } from "@opentelemetry/node/build/src/config";
 import type { Plugins } from "@opentelemetry/node/build/src/instrumentation/PluginLoader";
 import { Tracer } from "@opentelemetry/tracing";
+import Logging = require("./Logging");
+import { PluginConfig } from "@opentelemetry/api";
+
+const setupWarningMessage = (fn: string) => `${fn}(...) was called after the provider was already set up. Provider.start() must be called again for this change to take effect.`;
+
+type DefaultPlugins =
+  | 'mongodb'
+  | 'grpc'
+  | 'http'
+  | 'https'
+  | 'mysql'
+  | 'pg'
+  | 'redis'
+  | 'ioredis'
+  | 'pg-pool'
+  | 'express';
 
 export default class Provider {
 
@@ -14,6 +30,7 @@ export default class Provider {
   private static _instance: NodeTracerProvider;
   private static _contextManager: ContextManager | undefined;
   private static _logLevel = LogLevel.DEBUG;
+  private static _started = false;
 
   static get instance(): NodeTracerProvider {
     return this._instance;
@@ -27,12 +44,32 @@ export default class Provider {
     return opentelemetry.trace.getTracer("applicationinsights") as Tracer;
   }
 
-  static enablePlugin(module: string, enabled: boolean): Provider {
-    this.config[module].enabled = enabled;
+  static setInstrumentationPlugin(module: DefaultPlugins, config: boolean): Provider;
+  static setInstrumentationPlugin(module: string, config: PluginConfig): Provider;
+  static setInstrumentationPlugin(module: string | DefaultPlugins, config: boolean | PluginConfig): Provider {
+    if (this._started) {
+      Logging.warn(setupWarningMessage("setInstrumentationPlugin"));
+    }
+
+    if (this.config[module] && typeof config === "boolean") {
+      this.config[module].enabled = config
+    } else if (typeof config === "object") {
+      this.config[module] = {
+        ...this.config[module],
+        ...config,
+      };
+    } else {
+      Logging.warn("setInstrumentationPlugin(...) was called with invalid arguments", arguments);
+    }
+
     return this;
   }
 
-  static enableCorrelation(enabled: boolean): Provider {
+  static setContextCorrelation(enabled: boolean): Provider {
+    if (this._started) {
+      Logging.warn(setupWarningMessage("setContextCorrelation"));
+    }
+
     this._contextManager = enabled
       ? undefined // if undefined, defaults to AsyncHooksContextManager inside OpenTelemetry
       : new NoopContextManager();
@@ -59,15 +96,20 @@ export default class Provider {
       contextManager: this._contextManager,
     });
 
+    this._started = true;
     return this._instance;
+  }
+
+  static flush(): void {
+    this._instance?.getActiveSpanProcessor().forceFlush();
   }
 
   static dispose(): void {
     if (this._instance) {
-      (this._instance as any)["_registeredSpanProcessors"] = null;
+      this.config = DEFAULT_INSTRUMENTATION_PLUGINS;
       this._instance.stop();
       this._instance = null;
-    } else {
+      this._started = false;
     }
   }
 }

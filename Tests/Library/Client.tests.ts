@@ -359,6 +359,17 @@ describe("Library/TelemetryClient", () => {
             sendStub = sinon.stub(client.channel, "send");
             triggerStub.restore();
             triggerStub = sinon.stub(client.channel, "triggerSend");
+            Provider.dispose();
+        });
+
+        it("(OpenTelemetry) should invoke forceFlush", () => {
+            Provider.start();
+            const flushStub = sinon.stub(Provider["_instance"].activeSpanProcessor, "forceFlush").callsFake(() => {});
+
+            client.flush();
+            assert.strictEqual(flushStub.callCount, 1);
+
+            flushStub.restore();
         });
 
         it("should invoke the sender", () => {

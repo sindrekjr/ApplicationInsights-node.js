@@ -181,6 +181,7 @@ class TelemetryClient {
      * @param options Flush options, including indicator whether app is crashing and callback
      */
     public flush(options?: FlushOptions) {
+        Provider.flush();
         this.channel.triggerSend(
             options ? !!options.isAppCrashing : false,
             options ? options.callback : undefined);

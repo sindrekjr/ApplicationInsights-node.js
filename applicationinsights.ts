@@ -92,6 +92,8 @@ export function setup(setupString?: string) {
     return Configuration;
 }
 
+export const setInstrumentationPlugin = Provider.setInstrumentationPlugin;
+
 /**
  * Starts automatic collection of telemetry. Prior to calling start no
  * telemetry will be *automatically* collected, though manual collection
@@ -232,8 +234,8 @@ export class Configuration {
         Logging.warn(
             "setAutoCollectRequests is deprecated. Please configure enable/disable HTTP tracking using @opentelemetry/plugin-http(s) plugins. This function setAutoCollectRequests(...) is now a No-op.",
         );
-        Provider.enablePlugin("http", value);
-        Provider.enablePlugin("https", value);
+        Provider.setInstrumentationPlugin("http", value);
+        Provider.setInstrumentationPlugin("https", value);
         return Configuration;
     }
 
@@ -248,8 +250,8 @@ export class Configuration {
         Logging.warn(
             "setAutoCollectDependencies is deprecated. Please configure enable/disable using @opentelemetry/plugin-http(s) plugins. This function setAutoCollectDependencies(...) is now a No-op.",
         );
-        Provider.enablePlugin("http", value);
-        Provider.enablePlugin("https", value);
+        Provider.setInstrumentationPlugin("http", value);
+        Provider.setInstrumentationPlugin("https", value);
         return Configuration;
     }
 
@@ -260,7 +262,7 @@ export class Configuration {
      * @returns {Configuration} this class
      */
     public static setAutoDependencyCorrelation(value: boolean) {
-        Provider.enableCorrelation(value);
+        Provider.setContextCorrelation(value);
         return Configuration;
     }
 
