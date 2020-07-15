@@ -61,38 +61,33 @@ describe("Library/TelemetryClient", () => {
     var properties: { [key: string]: string; } = { p1: "p1", p2: "p2", common: "commonArg" };
     var failedProperties: { [key: string]: string; } = { p1: "p1", p2: "p2", common: "commonArg", errorProp: "errorVal" };
     var measurements: { [key: string]: number; } = { m1: 1, m2: 2 };
-    var client = new Client(iKey);
-    client.config.correlationId = `cid-v1:${appId}`;
+    let client: Client;
     var trackStub: Sinon.SinonStub;
     var triggerStub: Sinon.SinonStub;
     var sendStub: Sinon.SinonStub;
     var saveOnCrashStub: Sinon.SinonStub;
     let getSpanProcessorStub: Sinon.SinonStub;
 
-
-    before(() => {
+    beforeEach(() => {
+        client = new Client(iKey);
+        client.config.correlationId = `cid-v1:${appId}`;
         getSpanProcessorStub = sinon.stub(Provider.tracer, "getActiveSpanProcessor").returns(memoryExporter);
         trackStub = sinon.stub(client, "track");
         triggerStub = sinon.stub(client.channel, "triggerSend");
         sendStub = sinon.stub(client.channel, "send");
         saveOnCrashStub = sinon.stub(client.channel._sender, "saveOnCrash");
     });
-    after(() => {
+
+    afterEach(() => {
+        client.clearTelemetryProcessors();
         getSpanProcessorStub.restore();
         trackStub.restore();
         triggerStub.restore();
         sendStub.restore();
         saveOnCrashStub.restore();
         Provider.dispose();
-
-    });
-
-    afterEach(() => {
-        sendStub.reset();
-        client.clearTelemetryProcessors();
-        saveOnCrashStub.reset();
         memoryExporter.shutdown(); // reset
-    })
+    });
 
     var invalidInputHelper = (name: string) => {
         assert.doesNotThrow(() => (<any>client)[name](null, null), "#1");
@@ -324,13 +319,65 @@ describe("Library/TelemetryClient", () => {
                 ...properties,
                 [conventions.GeneralAttribute.NET_PEER_ADDRESS]: data,
                 [conventions.HttpAttribute.HTTP_STATUS_CODE]: 200,
+                tags: client.context.tags,
             });
         });
     });
 
     describe("#trackRequest()", () => {
+        it("should pass along client.commonProperties to the span", () => {
+            const url = "http://bing.com/search?q=test";
+            const commonProperties = { foo: "bar" };
+            client.commonProperties = commonProperties;
+            client.trackRequest({ url: url, source: "source", name: name, duration: value, success: true, resultCode: 200, properties: properties, time: startTime });
+
+            assert.strictEqual(memoryExporter.exportedSpans.length, 1);
+
+            const span = memoryExporter.exportedSpans[0];
+
+            assert.strictEqual(span.name, name);
+            assert.deepStrictEqual(hrTimeToMilliseconds(span.duration), value);
+            assert.deepStrictEqual(span.startTime, timeInputToHrTime(startTime.getTime()));
+            assert.deepStrictEqual(span.endTime, numberToHrtime(startTime.getTime() + value));
+            assert.deepStrictEqual(span.ended, true);
+
+            assert.deepStrictEqual(span.attributes, {
+                ...properties,
+                [conventions.GeneralAttribute.NET_PEER_ADDRESS]: url,
+                [conventions.HttpAttribute.HTTP_STATUS_CODE]: 200,
+                tags: client.context.tags,
+                ...commonProperties,
+            });
+        });
+
+        it("should pass along context.tags to the span", () => {
+            const url = "http://bing.com/search?q=test";
+            const sessionId = "abc";
+            client.context.tags[client.context.keys.sessionId] = "abc";
+            client.trackRequest({ url: url, source: "source", name: name, duration: value, success: true, resultCode: 200, properties: properties, time: startTime });
+
+            assert.strictEqual(memoryExporter.exportedSpans.length, 1);
+
+            const span = memoryExporter.exportedSpans[0];
+
+            assert.strictEqual(span.name, name);
+            assert.deepStrictEqual(hrTimeToMilliseconds(span.duration), value);
+            assert.deepStrictEqual(span.startTime, timeInputToHrTime(startTime.getTime()));
+            assert.deepStrictEqual(span.endTime, numberToHrtime(startTime.getTime() + value));
+            assert.deepStrictEqual(span.ended, true);
+
+            assert.deepStrictEqual(span.attributes, {
+                ...properties,
+                [conventions.GeneralAttribute.NET_PEER_ADDRESS]: url,
+                [conventions.HttpAttribute.HTTP_STATUS_CODE]: 200,
+                tags: client.context.tags,
+            });
+
+            assert.strictEqual(span.attributes.tags[client.context.keys.sessionId], sessionId);
+        });
+
         it("should create span with correct properties", () => {
-            var url = "http://bing.com/search?q=test";
+            const url = "http://bing.com/search?q=test";
             client.trackRequest({ url: url, source: "source", name: name, duration: value, success: true, resultCode: 200, properties: properties, time: startTime });
             assert.strictEqual(memoryExporter.exportedSpans.length, 1);
 
@@ -346,7 +393,10 @@ describe("Library/TelemetryClient", () => {
                 ...properties,
                 [conventions.GeneralAttribute.NET_PEER_ADDRESS]: url,
                 [conventions.HttpAttribute.HTTP_STATUS_CODE]: 200,
+                tags: client.context.tags,
             });
+
+            assert.strictEqual(span.attributes.tags[client.context.keys.sessionId], undefined, "Session ID is not set by default");
         });
     });
 

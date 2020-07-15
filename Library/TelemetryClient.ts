@@ -132,9 +132,11 @@ class TelemetryClient {
             kind: opentelemetry.SpanKind.SERVER,
             startTime,
             attributes: {
+                ...this.commonProperties,
                 ...telemetry.properties,
                 [conventions.GeneralAttribute.NET_PEER_ADDRESS]: telemetry.url,
                 [conventions.HttpAttribute.HTTP_STATUS_CODE]: telemetry.resultCode,
+                tags: this.context.tags,
             },
         });
         span.setStatus({
@@ -164,9 +166,11 @@ class TelemetryClient {
             kind: opentelemetry.SpanKind.SERVER,
             startTime,
             attributes: {
+                ...this.commonProperties,
                 ...telemetry.properties,
                 [conventions.GeneralAttribute.NET_PEER_ADDRESS]: telemetry.data,
                 [conventions.HttpAttribute.HTTP_STATUS_CODE]: telemetry.resultCode,
+                tags: this.context.tags,
             },
         });
         span.setStatus({
