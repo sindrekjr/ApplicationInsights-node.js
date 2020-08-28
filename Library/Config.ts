@@ -28,6 +28,8 @@ class Config {
 
     /** An identifier for your Application Insights resource */
     public instrumentationKey: string;
+    /** An identifier for your Application Insights resource */
+    public connectionString: string | undefined;
     /** The id for cross-component correlation. READ ONLY. */
     public correlationId: string;
     /** The ingestion endpoint to send telemetry payloads to */
@@ -72,6 +74,7 @@ class Config {
             : setupString; // CS was invalid, so it must be an ikey
 
         this.instrumentationKey = csCode.instrumentationkey || iKeyCode /* === instrumentationKey */ || csEnv.instrumentationkey || Config._getInstrumentationKey();
+        this.connectionString = connectionStringEnv || (csCode.instrumentationkey ? setupString : undefined);
         // validate ikey. If fails throw a warning
         if(!Config._validateInstrumentationKey(this.instrumentationKey)) {
             Logging.warn("An invalid instrumentation key was provided. There may be resulting telemetry loss", this.instrumentationKey);

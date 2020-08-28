@@ -2,7 +2,6 @@ import Provider from "./Library/Provider";
 import AutoCollectConsole = require("./AutoCollection/Console");
 import AutoCollectExceptions = require("./AutoCollection/Exceptions");
 import AutoCollectPerformance = require("./AutoCollection/Performance");
-import HeartBeat = require("./AutoCollection/HeartBeat");
 import Logging = require("./Library/Logging");
 import QuickPulseClient = require("./Library/QuickPulseStateManager");
 
@@ -51,7 +50,6 @@ let _diskRetryMaxBytes: number = undefined;
 let _console: AutoCollectConsole;
 let _exceptions: AutoCollectExceptions;
 let _performance: AutoCollectPerformance;
-let _heartbeat: HeartBeat;
 let _nativePerformance: AutoCollectNativePerformance;
 
 let _isStarted = false;
@@ -82,7 +80,6 @@ export function setup(setupString?: string) {
         _console = new AutoCollectConsole(defaultClient);
         _exceptions = new AutoCollectExceptions(defaultClient);
         _performance = new AutoCollectPerformance(defaultClient);
-        _heartbeat = new HeartBeat(defaultClient);
         if (!_nativePerformance) {
             _nativePerformance = new AutoCollectNativePerformance(defaultClient);
         }
@@ -115,7 +112,6 @@ export function start() {
         _console.enable(_isConsole, _isConsoleLog);
         _exceptions.enable(_isExceptions);
         _performance.enable(_isPerformance);
-        _heartbeat.enable(_isHeartBeat, defaultClient.config);
         _nativePerformance.enable(_isNativePerformance, _disabledExtendedMetrics);
         if (liveMetricsClient && _isSendingLiveMetrics) {
             liveMetricsClient.enable(_isSendingLiveMetrics);
@@ -230,14 +226,10 @@ export class Configuration {
     /**
      * Sets the state of request tracking (enabled by default)
      * @param value if true HeartBeat metric data will be collected every 15 mintues and sent to Application Insights
+     * @deprecated use resource-detector-azure instead
      * @returns {Configuration} this class
      */
     public static setAutoCollectHeartbeat(value: boolean) {
-        _isHeartBeat = value;
-        if (_isStarted) {
-            _heartbeat.enable(value, defaultClient.config);
-        }
-
         return Configuration;
     }
 
@@ -356,7 +348,6 @@ export class Configuration {
  * Disposes the default client and all the auto collectors so they can be reinitialized with different configuration
 */
 export function dispose() {
-    CorrelationIdManager.w3cEnabled = true; // reset to default
     defaultClient = null;
     Provider.dispose();
     _isStarted = false;
@@ -368,9 +359,6 @@ export function dispose() {
     }
     if (_performance) {
         _performance.dispose();
-    }
-    if (_heartbeat) {
-        _heartbeat.dispose();
     }
     if (_nativePerformance) {
         _nativePerformance.dispose();
