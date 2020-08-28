@@ -30,7 +30,7 @@ describe("ApplicationInsights", () => {
         it("should not warn if setup is called once", () => {
             var warnStub = sinon.spy(console, "warn");
             AppInsights.defaultClient = undefined;
-            AppInsights.setup("key");
+            AppInsights.setup("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333");
             assert.ok(warnStub.notCalled, "warning was not raised");
             warnStub.restore();
         });
@@ -38,8 +38,8 @@ describe("ApplicationInsights", () => {
         it("should warn if setup is called twice", () => {
             var warnStub = sinon.spy(console, "warn");
             AppInsights.defaultClient = undefined;
-            AppInsights.setup("key");
-            AppInsights.setup("key");
+            AppInsights.setup("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333");
+            AppInsights.setup("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333");
             assert.ok(warnStub.calledOn, "warning was raised");
             warnStub.restore();
         });
@@ -47,11 +47,11 @@ describe("ApplicationInsights", () => {
         it("should not overwrite default client if called more than once", () => {
             var warnStub = sinon.stub(console, "warn");
             AppInsights.defaultClient = undefined;
-            AppInsights.setup("key");
+            AppInsights.setup("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333");
             var client = AppInsights.defaultClient;
-            AppInsights.setup("key");
-            AppInsights.setup("key");
-            AppInsights.setup("key");
+            AppInsights.setup("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333");
+            AppInsights.setup("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333");
+            AppInsights.setup("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333");
             assert.ok(client === AppInsights.defaultClient, "client is not overwritten");
             warnStub.restore();
         });
@@ -80,18 +80,18 @@ describe("ApplicationInsights", () => {
 
         it("should not warn if start is called after setup", () => {
             var warnStub = sinon.stub(console, "warn");
-            AppInsights.setup("key").start();
+            AppInsights.setup("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333").start();
             assert.ok(warnStub.notCalled, "warning was not raised");
             warnStub.restore();
         });
 
         it("should not start live metrics", () => {
-            AppInsights.setup("key").start();
+            AppInsights.setup("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333").start();
             assert.equal(AppInsights.liveMetricsClient, undefined, "live metrics client is not defined");
         });
 
         it("should not start live metrics", () => {
-            AppInsights.setup("key").setSendLiveMetrics(false).start();
+            AppInsights.setup("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333").setSendLiveMetrics(false).start();
             assert.equal(AppInsights.liveMetricsClient, undefined, "live metrics client is not defined");
         });
     });
@@ -108,13 +108,13 @@ describe("ApplicationInsights", () => {
         })
 
         it("should enable W3C tracing mode by default", () => {
-            AppInsights.setup("key").start();
+            AppInsights.setup("aa11111-bbbb-1ccc-8ddd-eeeeffff3333").start();
             assert.equal(CorrelationIdManager.w3cEnabled, true);
         });
 
         it("(backcompat) (no-op) should be able to enable W3C tracing mode via enum", () => {
             assert.doesNotThrow(() => {
-                AppInsights.setup("key").setDistributedTracingMode(DistributedTracingModes.AI_AND_W3C).start();
+                AppInsights.setup("aa11111-bbbb-1ccc-8ddd-eeeeffff3333").setDistributedTracingMode(DistributedTracingModes.AI_AND_W3C).start();
             });
         });
     });
@@ -133,7 +133,7 @@ describe("ApplicationInsights", () => {
         });
 
         it("auto-collection is initialized by default", () => {
-            AppInsights.setup("key").start();
+            AppInsights.setup("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333").start();
 
             //assert.ok(Console.INSTANCE.isInitialized());
             assert.ok(Exceptions.INSTANCE.isInitialized());
@@ -141,7 +141,7 @@ describe("ApplicationInsights", () => {
         });
 
         it("auto-collection is not initialized if disabled before 'start'", () => {
-            AppInsights.setup("key")
+            AppInsights.setup("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333")
                 .setAutoCollectConsole(false)
                 .setAutoCollectExceptions(false)
                 .setAutoCollectPerformance(false)
