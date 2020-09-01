@@ -44,11 +44,12 @@ describe("#setupAndStart()", () => {
         // Test
         const Default = require("../../Bootstrap/Default") as typeof DefaultTypes;
         Default.setLogger(new DiagnosticLogger(logger));
-        const instance1 = Default.setupAndStart("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333");
+        const instance1 = Default.setupAndStart("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333")!;
         assert.ok(instance1.defaultClient);
-        const instance2 = Default.setupAndStart("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333");
+        const instance2 = Default.setupAndStart("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333")!;
         assert.deepEqual(instance1.defaultClient, instance2.defaultClient);
         assert.deepEqual(instance1.defaultClient["_telemetryProcessors"].length, 2);
+        assert.ok(instance2.defaultClient);
         assert.deepEqual(instance2.defaultClient["_telemetryProcessors"].length, 2);
 
         // Cleanup
@@ -69,6 +70,7 @@ describe("#setupAndStart()", () => {
         const Default = require("../../Bootstrap/Default") as typeof DefaultTypes;
         Default.setLogger(new DiagnosticLogger(logger));
         const instance = Default.setupAndStart("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333");
+        assert.ok(instance);
         assert.deepEqual(instance, appInsights);
 
         // Cleanup

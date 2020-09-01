@@ -15,12 +15,15 @@ class CorrelationIdManager {
     // To avoid extraneous HTTP requests, we maintain a queue of callbacks waiting on a particular appId lookup,
     // as well as a cache of completed lookups so future requests can be resolved immediately.
     private static pendingLookups: { [key: string]: Function[] } = {};
-    private static completedLookups: { [key: string]: string } = {};
+    private static completedLookups: { [key: string]: string | undefined } = {};
 
     private static requestIdMaxLength = 1024;
     private static currentRootId = Util.randomu32();
 
-    public static queryCorrelationId(config: Config, callback: (correlationId: string) => void) {
+    public static queryCorrelationId(
+        config: Config,
+        callback: (correlationId: string | undefined) => void
+    ) {
         // GET request to `${this.endpointBase}/api/profiles/${this.instrumentationKey}/appId`
         // If it 404s, the iKey is bad and we should give up
         // If it fails otherwise, try again later
@@ -69,7 +72,11 @@ class CorrelationIdManager {
                         }
                         delete CorrelationIdManager.pendingLookups[appIdUrlString];
                     });
-                } else if (res.statusCode >= 400 && res.statusCode < 500) {
+                } else if (
+                    typeof res.statusCode === "number" &&
+                    res.statusCode >= 400 &&
+                    res.statusCode < 500
+                ) {
                     // Not found, probably a bad key. Do not try again.
                     CorrelationIdManager.completedLookups[appIdUrlString] = undefined;
                     delete CorrelationIdManager.pendingLookups[appIdUrlString];

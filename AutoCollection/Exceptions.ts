@@ -3,7 +3,7 @@ import TelemetryClient = require("../Library/TelemetryClient");
 type ExceptionHandle = "uncaughtExceptionMonitor" | "uncaughtException" | "unhandledRejection";
 
 class AutoCollectExceptions {
-    public static INSTANCE: AutoCollectExceptions = null;
+    public static INSTANCE: AutoCollectExceptions | null = null;
     public static UNCAUGHT_EXCEPTION_MONITOR_HANDLER_NAME: ExceptionHandle =
         "uncaughtExceptionMonitor";
     public static UNCAUGHT_EXCEPTION_HANDLER_NAME: ExceptionHandle = "uncaughtException";
@@ -12,8 +12,8 @@ class AutoCollectExceptions {
     private static _FALLBACK_ERROR_MESSAGE =
         "A promise was rejected without providing an error. Application Insights generated this error stack for you.";
     private static _canUseUncaughtExceptionMonitor = false;
-    private _exceptionListenerHandle: (reThrow: boolean, error: Error) => void;
-    private _rejectionListenerHandle: (reThrow: boolean, error: Error) => void;
+    private _exceptionListenerHandle?: (error: Error | undefined) => void;
+    private _rejectionListenerHandle?: (error: Error | undefined) => void;
     private _client: TelemetryClient;
     private _isInitialized: boolean;
 
@@ -47,7 +47,9 @@ class AutoCollectExceptions {
                 const handle = (
                     reThrow: boolean,
                     name: ExceptionHandle,
-                    error: Error = new Error(AutoCollectExceptions._FALLBACK_ERROR_MESSAGE)
+                    error: Error | undefined = new Error(
+                        AutoCollectExceptions._FALLBACK_ERROR_MESSAGE
+                    )
                 ) => {
                     this._client.trackException({ exception: error });
                     this._client.flush({ isAppCrashing: true });
@@ -61,7 +63,11 @@ class AutoCollectExceptions {
 
                 if (AutoCollectExceptions._canUseUncaughtExceptionMonitor) {
                     // Node.js >= 13.7.0, use uncaughtExceptionMonitor. It handles both promises and exceptions
-                    this._exceptionListenerHandle = handle.bind(this, false, undefined); // never rethrows
+                    this._exceptionListenerHandle = handle.bind(
+                        this,
+                        false,
+                        AutoCollectExceptions.UNCAUGHT_EXCEPTION_MONITOR_HANDLER_NAME
+                    ); // never rethrows
                     process.on(
                         AutoCollectExceptions.UNCAUGHT_EXCEPTION_MONITOR_HANDLER_NAME,
                         this._exceptionListenerHandle
@@ -72,7 +78,11 @@ class AutoCollectExceptions {
                         true,
                         AutoCollectExceptions.UNCAUGHT_EXCEPTION_HANDLER_NAME
                     );
-                    this._rejectionListenerHandle = handle.bind(this, false, undefined); // never rethrows
+                    this._rejectionListenerHandle = handle.bind(
+                        this,
+                        false,
+                        AutoCollectExceptions.UNHANDLED_REJECTION_HANDLER_NAME
+                    ); // never rethrows
                     process.on(
                         AutoCollectExceptions.UNCAUGHT_EXCEPTION_HANDLER_NAME,
                         this._exceptionListenerHandle
@@ -91,14 +101,18 @@ class AutoCollectExceptions {
                         this._exceptionListenerHandle
                     );
                 } else {
-                    process.removeListener(
-                        AutoCollectExceptions.UNCAUGHT_EXCEPTION_HANDLER_NAME,
-                        this._exceptionListenerHandle
-                    );
-                    process.removeListener(
-                        AutoCollectExceptions.UNHANDLED_REJECTION_HANDLER_NAME,
-                        this._rejectionListenerHandle
-                    );
+                    if (this._exceptionListenerHandle) {
+                        process.removeListener(
+                            AutoCollectExceptions.UNCAUGHT_EXCEPTION_HANDLER_NAME,
+                            this._exceptionListenerHandle
+                        );
+                    }
+                    if (this._rejectionListenerHandle) {
+                        process.removeListener(
+                            AutoCollectExceptions.UNHANDLED_REJECTION_HANDLER_NAME,
+                            this._rejectionListenerHandle
+                        );
+                    }
                 }
                 this._exceptionListenerHandle = undefined;
                 this._rejectionListenerHandle = undefined;

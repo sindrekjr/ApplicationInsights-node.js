@@ -23,8 +23,8 @@ class QuickPulseStateManager {
     private _sender: QuickPulseSender;
     private _isEnabled: boolean;
     private _lastSuccessTime: number = Date.now();
-    private _lastSendSucceeded: boolean = true;
-    private _handle: NodeJS.Timer;
+    private _lastSendSucceeded: boolean | null = true;
+    private _handle: NodeJS.Timer | null;
     private _metrics: { [name: string]: Contracts.MetricQuickPulse } = {};
     private _documents: Contracts.DocumentQuickPulse[] = [];
     private _collectors: { enable: (enable: boolean) => void }[] = [];
@@ -72,8 +72,8 @@ class QuickPulseStateManager {
             this._goQuickPulse();
         } else if (!isEnabled && this._isEnabled) {
             this._isEnabled = false;
-            clearTimeout(this._handle);
-            this._handle = undefined;
+            this._handle && clearTimeout(this._handle);
+            this._handle = null;
         }
     }
 
@@ -111,7 +111,6 @@ class QuickPulseStateManager {
     }
 
     private _resetQuickPulseBuffer(): void {
-        delete this._metrics;
         this._metrics = {};
         this._documents.length = 0;
     }
@@ -156,8 +155,8 @@ class QuickPulseStateManager {
             currentTimeout = QuickPulseStateManager.FALLBACK_INTERVAL;
         }
         this._lastSendSucceeded = null;
-        this._handle = <any>setTimeout(this._goQuickPulse.bind(this), currentTimeout);
-        this._handle.unref(); // Don't block apps from terminating
+        this._handle = setTimeout(this._goQuickPulse.bind(this), currentTimeout);
+        this._handle?.unref(); // Don't block apps from terminating
     }
 
     private _ping(envelope: Contracts.EnvelopeQuickPulse): void {
@@ -179,7 +178,12 @@ class QuickPulseStateManager {
             }
             this._isCollectingData = shouldPOST;
 
-            if (res && res.statusCode < 300 && res.statusCode >= 200) {
+            if (
+                res &&
+                typeof res.statusCode === "number" &&
+                res.statusCode < 300 &&
+                res.statusCode >= 200
+            ) {
                 this._lastSuccessTime = Date.now();
                 this._lastSendSucceeded = true;
             } else {

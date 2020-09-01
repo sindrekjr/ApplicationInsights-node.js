@@ -89,7 +89,7 @@ describe("Library/EnvelopeFactory", () => {
             assert.doesNotThrow(() => {
                 const envelope = EnvelopeFactory.createEnvelope(
                     <Contracts.DependencyTelemetry>{
-                        name: null,
+                        name: undefined,
                         data: "GET https://example.com",
                         duration: 123,
                         success: true,
@@ -253,10 +253,8 @@ describe("Library/EnvelopeFactory", () => {
             assert.deepEqual(data.baseData.measurements, pageViewTelemetry.measurements);
             assert.deepEqual(data.baseData.name, pageViewTelemetry.name);
             assert.deepEqual(data.baseData.properties, pageViewTelemetry.properties);
-            assert.deepEqual(
-                data.baseData.duration,
-                Util.msToTimeSpan(pageViewTelemetry.duration!)
-            );
+            assert.ok(typeof pageViewTelemetry.duration === "number");
+            assert.deepEqual(data.baseData.duration, Util.msToTimeSpan(pageViewTelemetry.duration));
         });
     });
 });

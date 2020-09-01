@@ -55,6 +55,7 @@ describe("AutoCollection/Performance", () => {
             );
             performance1.enable(true);
             performance2.enable(true);
+            assert.ok(Performance.INSTANCE);
             Performance.INSTANCE.enable(true);
             const stub1 = sinon.stub(performance1["_client"], "trackMetric");
             const stub2 = sinon.stub(performance2["_client"], "trackMetric");
@@ -114,6 +115,7 @@ describe("AutoCollection/Performance", () => {
                     );
 
                     appInsights.setAutoCollectPerformance(true); // set back to default of true so tests expecting the default can pass
+                    assert.ok(Performance.INSTANCE);
                     Performance.INSTANCE.dispose();
                     performance1.dispose();
                     performance2.dispose();

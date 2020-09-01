@@ -2,7 +2,6 @@
 
 import * as path from "path";
 import * as fs from "fs";
-import * as os from "os";
 import * as DataModel from "./DataModel";
 import * as FileHelpers from "./Helpers/FileHelpers";
 
@@ -17,7 +16,7 @@ export interface FileWriterOptions {
 export const homedir = FileHelpers.homedir;
 
 export class FileWriter implements DataModel.AgentLogger {
-    public callback = (_err: Error) => {}; // no-op
+    public callback = (_err: Error | null) => {}; // no-op
     private _ready = false;
     private _options: FileWriterOptions;
     private static _fullpathsToDelete: string[] = [];
@@ -65,7 +64,7 @@ export class FileWriter implements DataModel.AgentLogger {
                             this._filepath,
                             this._filename,
                             (renameErr, renamedFullpath) => {
-                                if (renameErr) return;
+                                if (renameErr || !renamedFullpath) return;
                                 FileWriter._fullpathsToDelete.push(renamedFullpath);
                                 this._options.append
                                     ? this._appendFile(data + "\n")
@@ -117,9 +116,7 @@ export class FileWriter implements DataModel.AgentLogger {
         }
     }
 
-    private _shouldRenameFile(
-        callback?: (err: Error | null, shouldRename?: boolean) => void
-    ): void {
+    private _shouldRenameFile(callback: (err: Error | null, shouldRename?: boolean) => void): void {
         const fullpath = path.join(this._filepath, this._filename);
         fs.stat(fullpath, (err, stats) => {
             if (err) {

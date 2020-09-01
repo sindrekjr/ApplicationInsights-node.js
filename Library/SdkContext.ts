@@ -10,7 +10,7 @@ class Context {
     public tags: { [key: string]: string };
     public static DefaultRoleName: string = "Web";
     public static appVersion: { [path: string]: string } = {};
-    public static sdkVersion: string = null;
+    public static sdkVersion: string;
 
     constructor(packageJsonPath?: string) {
         this.keys = new Contracts.ContextTagKeys();

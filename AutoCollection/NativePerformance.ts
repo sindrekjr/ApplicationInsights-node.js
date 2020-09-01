@@ -23,7 +23,7 @@ export class AutoCollectNativePerformance {
     private static _metricsAvailable: boolean; // is the native metrics lib installed
     private _isEnabled: boolean;
     private _isInitialized: boolean;
-    private _handle: NodeJS.Timer;
+    private _handle: NodeJS.Timer | undefined;
     private _client: TelemetryClient;
     private _disabledMetrics: IDisabledExtendedMetrics = {};
 

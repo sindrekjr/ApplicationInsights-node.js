@@ -268,7 +268,8 @@ class Util {
 
         for (let i = 0; i < excludedDomains.length; i++) {
             const regex = new RegExp(excludedDomains[i].replace(/\./g, ".").replace(/\*/g, ".*"));
-            if (regex.test(url.parse(requestUrl).hostname)) {
+            const hostname = url.parse(requestUrl).hostname;
+            if (!hostname || regex.test(hostname)) {
                 return false;
             }
         }
@@ -360,7 +361,7 @@ class Util {
         request: http.ClientRequest | http.ServerResponse,
         correlationHeader: any
     ) {
-        let header: string; // attempt to cast correlationHeader to string
+        let header: string | undefined; // attempt to cast correlationHeader to string
         if (typeof correlationHeader === "string") {
             header = correlationHeader;
         } else if (correlationHeader instanceof Array) {

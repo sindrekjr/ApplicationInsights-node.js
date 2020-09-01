@@ -16,7 +16,7 @@ describe("AutoCollection/Exceptions", () => {
             const expectation =
                 parseInt(nodeVer[0]) > 13 ||
                 (parseInt(nodeVer[0]) === 13 && parseInt(nodeVer[1]) >= 7);
-            const exceptions = new AutoCollectionExceptions(null);
+            const exceptions = new AutoCollectionExceptions(null!);
             assert.equal(AutoCollectionExceptions["_canUseUncaughtExceptionMonitor"], expectation);
         });
 

@@ -1,7 +1,6 @@
 "use strict";
 
 import * as path from "path";
-import * as fs from "fs";
 import * as DataModel from "./DataModel";
 import { FileWriter } from "./FileWriter";
 import { homedir } from "./Helpers/FileHelpers";
@@ -11,17 +10,14 @@ export class DiagnosticLogger {
     public static readonly DEFAULT_LOG_DIR: string =
         process.env.APPLICATIONINSIGHTS_LOGDIR ||
         path.join(homedir, "LogFiles/ApplicationInsights");
-    public static DefaultEnvelope: DataModel.DiagnosticLog = {
-        message: null,
-        level: null,
-        time: null,
+    public static DefaultEnvelope = {
         logger: "nodejs.applicationinsights",
         properties: {},
     };
 
     constructor(private _writer: DataModel.AgentLogger = console) {}
 
-    logMessage(message: DataModel.DiagnosticLog | string, cb?: (err: Error) => void) {
+    logMessage(message: DataModel.DiagnosticLog | string, cb?: (err: Error | null) => void) {
         if (typeof cb === "function" && this._writer instanceof FileWriter) {
             this._writer.callback = cb;
         }
@@ -42,7 +38,7 @@ export class DiagnosticLogger {
         }
     }
 
-    logError(message: DataModel.DiagnosticLog | string, cb?: (err: Error) => void) {
+    logError(message: DataModel.DiagnosticLog | string, cb?: (err: Error | null) => void) {
         if (typeof cb === "function" && this._writer instanceof FileWriter) {
             this._writer.callback = cb;
         }

@@ -48,10 +48,11 @@ describe("Library/QuickPulseStateManager", () => {
         it("should clear timeout handle when isEnabled == false", () => {
             assert.equal(qps["_handle"], undefined);
             qps["_isEnabled"] = true;
-            (<any>qps["_handle"]) = setTimeout(() => {
+            qps["_handle"] = setTimeout(() => {
                 throw new Error("this error should be cancelled");
             }, 1000);
-            <any>qps["_handle"].unref();
+            assert.ok(qps["_handle"]);
+            qps["_handle"].unref();
             assert.ok(qps["_handle"]);
 
             qps.enable(false);

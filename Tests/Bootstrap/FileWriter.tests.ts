@@ -10,7 +10,7 @@ describe("FileWriter", () => {
     if (!FileWriter.isNodeVersionCompatible()) {
         return;
     }
-
+    assert.ok(homedir);
     const filedir = path.join(homedir, "LogFiles/ApplicationInsights/test");
     describe("#constructor()", () => {
         it("should return a ready FileWriter", () => {
@@ -164,6 +164,7 @@ describe("FileWriter", () => {
 
                 // Rename the file
                 FileHelpers.renameCurrentFile(filedir, "renametest.txt", (err, renamedfullpath) => {
+                    assert.ok(renamedfullpath);
                     // Assert previously named file no longer exists
                     try {
                         const content = fs.readFileSync(path.join(filedir, "renametest.txt"));

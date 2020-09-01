@@ -8,6 +8,7 @@ import { FileWriter, homedir } from "../../Bootstrap/FileWriter";
 
 describe("#logStatus()", () => {
     it("should write a status file to disk", (done) => {
+        assert.ok(homedir);
         const filepath = path.join(homedir, "LogFiles/ApplicationInsights/status");
         const filename = StatusLogger.DEFAULT_FILE_NAME;
         const fileWriter = new FileWriter(filepath, filename);
@@ -15,7 +16,7 @@ describe("#logStatus()", () => {
             done();
         } else {
             const statusLogger = new StatusLogger(fileWriter);
-            statusLogger.logStatus(StatusLogger.DEFAULT_STATUS, (err: Error) => {
+            statusLogger.logStatus(StatusLogger.DEFAULT_STATUS, (err: Error | null) => {
                 assert.equal(err, null);
                 const buffer = JSON.parse(fs.readFileSync(path.join(filepath, filename), "utf8"));
                 assert.deepEqual(buffer, StatusLogger.DEFAULT_STATUS);

@@ -1,6 +1,5 @@
 import * as types from "../applicationinsights";
 import * as Helpers from "./Helpers";
-import * as DataModel from "./DataModel";
 import Constants = require("../Declarations/Constants");
 import { StatusLogger, StatusContract } from "./StatusLogger";
 import { DiagnosticLogger } from "./DiagnosticLogger";
@@ -72,6 +71,13 @@ export function setupAndStart(setupString = _setupString): typeof types | null {
 
     try {
         _appInsights = require("../applicationinsights");
+
+        if (!_appInsights) {
+            // never
+            _logger.logError("Application Insights could not be required");
+            return null;
+        }
+
         if (_appInsights.defaultClient) {
             // setupAndStart was already called, return the result
             _logger.logError(
@@ -80,10 +86,10 @@ export function setupAndStart(setupString = _setupString): typeof types | null {
             return _appInsights;
         }
 
-        const prefixInternalSdkVersion = function (
-            envelope: types.Contracts.Envelope,
-            _contextObjects: Object
-        ) {
+        const prefixInternalSdkVersion = function (envelope: types.Contracts.Envelope) {
+            if (!_appInsights?.defaultClient) {
+                return true;
+            }
             try {
                 const appInsightsSDKVersion =
                     _appInsights.defaultClient.context.keys.internalSdkVersion;
@@ -96,10 +102,12 @@ export function setupAndStart(setupString = _setupString): typeof types | null {
         };
 
         const copyOverPrefixInternalSdkVersionToHeartBeatMetric = function (
-            envelope: types.Contracts.Envelope,
-            _contextObjects: Object
+            envelope: types.Contracts.Envelope
         ) {
-            const appInsightsSDKVersion =
+            if (!_appInsights?.defaultClient) {
+                return true;
+            }
+            const appInsightsSDKVersion: string =
                 _appInsights.defaultClient.context.keys.internalSdkVersion;
             const sdkVersion = envelope.tags[appInsightsSDKVersion] || "";
             if (envelope.name === Constants.HeartBeatMetricName) {
@@ -113,8 +121,10 @@ export function setupAndStart(setupString = _setupString): typeof types | null {
 
         // Instrument the SDK
         _appInsights.setup(setupString).setSendLiveMetrics(true);
-        _appInsights.defaultClient.addTelemetryProcessor(prefixInternalSdkVersion);
-        _appInsights.defaultClient.addTelemetryProcessor(
+        ((_appInsights.defaultClient as unknown) as types.TelemetryClient).addTelemetryProcessor(
+            prefixInternalSdkVersion
+        );
+        ((_appInsights.defaultClient as unknown) as types.TelemetryClient).addTelemetryProcessor(
             copyOverPrefixInternalSdkVersionToHeartBeatMetric
         );
         _appInsights.start();

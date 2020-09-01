@@ -4,9 +4,9 @@ import * as path from "path";
 import * as fs from "fs";
 import * as os from "os";
 
-export const homedir = os.homedir
+export const homedir: string = os.homedir
     ? os.homedir()
-    : process.env[process.platform == "win32" ? "USERPROFILE" : "HOME"];
+    : process.env[process.platform == "win32" ? "USERPROFILE" : "HOME"] ?? ".";
 
 /**
  * Zero dependencies: recursive mkdir
@@ -57,7 +57,7 @@ export function makeStatusDirs(filepath: string): boolean {
 export function renameCurrentFile(
     filepath: string,
     filename: string,
-    callback?: (err: Error | null, destfullpath?: string) => void
+    callback: (err: Error | null, destfullpath?: string) => void
 ): void {
     const fullpath = path.join(filepath, filename);
     const basename = path.basename(filename, path.extname(filename));

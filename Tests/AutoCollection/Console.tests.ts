@@ -4,7 +4,7 @@ import Console = require("../../AutoCollection/Console");
 
 import AppInsights = require("../../applicationinsights");
 
-import { channel, IStandardEvent } from "diagnostic-channel";
+import { channel } from "diagnostic-channel";
 import { enable, dispose as disable } from "../../AutoCollection/diagnostic-channel/console.sub";
 import { console } from "diagnostic-channel-publishers";
 
@@ -17,6 +17,7 @@ describe("AutoCollection/Console", () => {
             const appInsights = AppInsights.setup(
                 "1aa11111-bbbb-1ccc-8ddd-eeeeffff3333"
             ).setAutoCollectConsole(true);
+            assert.ok(Console.INSTANCE);
             const enableConsoleRequestsSpy = sinon.spy(Console.INSTANCE, "enable");
             appInsights.start();
 
@@ -40,7 +41,7 @@ describe("AutoCollection/Console", () => {
         it("should call trackException for errors and trackTrace for logs", () => {
             const appInsights = AppInsights.setup("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333");
             appInsights.start();
-
+            assert.ok(AppInsights.defaultClient);
             const trackExceptionStub = sinon.stub(AppInsights.defaultClient, "trackException");
             const trackTraceStub = sinon.stub(AppInsights.defaultClient, "trackTrace");
 

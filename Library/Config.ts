@@ -59,7 +59,7 @@ class Config {
     public ignoreLegacyHeaders?: boolean;
 
     private endpointBase: string = Constants.DEFAULT_BREEZE_ENDPOINT;
-    private setCorrelationId: (v: string) => void;
+    private setCorrelationId: (v: string | undefined) => void;
     private _profileQueryEndpoint: string | undefined;
     /** Host name for quickpulse service */
     private _quickPulseHost: string | undefined;

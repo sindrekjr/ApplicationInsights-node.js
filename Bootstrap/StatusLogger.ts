@@ -14,7 +14,7 @@ export interface StatusContract {
     MachineName: string;
     PID: string;
     SdkVersion: string;
-    Ikey: string;
+    Ikey?: string;
 }
 
 function readPackageVersion() {
@@ -45,7 +45,7 @@ export class StatusLogger {
 
     constructor(public _writer: DataModel.AgentLogger = console) {}
 
-    public logStatus(data: StatusContract, cb?: (err: Error) => void) {
+    public logStatus(data: StatusContract, cb?: (err: Error | null) => void) {
         if (typeof cb === "function" && this._writer instanceof FileWriter) {
             this._writer.callback = cb;
         }

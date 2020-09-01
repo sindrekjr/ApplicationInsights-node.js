@@ -1,17 +1,10 @@
 import assert = require("assert");
-import crypto = require("crypto");
 import sinon = require("sinon");
-import Sinon = require("sinon");
-import http = require("http");
-import eventEmitter = require("events");
 
 import Client = require("../../Library/TelemetryClient");
-import Config = require("../../Library/Config");
 import Contracts = require("../../Declarations/Contracts");
-import RequestResponseHeaders = require("../../Library/RequestResponseHeaders");
-import Util = require("../../Library/Util");
 import EnvelopeFactory = require("../../Library/EnvelopeFactory");
-import { SpanProcessor, Span, ReadableSpan } from "@opentelemetry/tracing";
+import { SpanProcessor, ReadableSpan } from "@opentelemetry/tracing";
 import Provider from "../../Library/Provider";
 import { timeInputToHrTime, hrTimeToMilliseconds } from "@opentelemetry/core";
 import type { HrTime } from "@opentelemetry/api";
@@ -64,11 +57,11 @@ describe("Library/TelemetryClient", () => {
     };
     const measurements: { [key: string]: number } = { m1: 1, m2: 2 };
     let client: Client;
-    let trackStub: Sinon.SinonStub;
-    let triggerStub: Sinon.SinonStub;
-    let sendStub: Sinon.SinonStub;
-    let saveOnCrashStub: Sinon.SinonStub;
-    let getSpanProcessorStub: Sinon.SinonStub;
+    let trackStub: sinon.SinonStub;
+    let triggerStub: sinon.SinonStub;
+    let sendStub: sinon.SinonStub;
+    let saveOnCrashStub: sinon.SinonStub;
+    let getSpanProcessorStub: sinon.SinonStub;
 
     beforeEach(() => {
         client = new Client(iKey);
@@ -475,7 +468,7 @@ describe("Library/TelemetryClient", () => {
         it("(OpenTelemetry) should invoke forceFlush", () => {
             Provider.start();
             const flushStub = sinon
-                .stub(Provider["_instance"].activeSpanProcessor, "forceFlush")
+                .stub(Provider["_instance"]!.activeSpanProcessor, "forceFlush")
                 .callsFake(() => {});
 
             client.flush();
@@ -579,6 +572,7 @@ describe("Library/TelemetryClient", () => {
             const expectedName = "I was here";
 
             client.addTelemetryProcessor((env, contextObjects) => {
+                assert.ok(contextObjects && contextObjects["name"]);
                 env.name = contextObjects["name"];
                 return true;
             });

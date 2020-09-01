@@ -4,7 +4,7 @@ import TelemetryClient = require("../Library/TelemetryClient");
 import Constants = require("../Declarations/Constants");
 
 class AutoCollectPerformance {
-    public static INSTANCE: AutoCollectPerformance;
+    public static INSTANCE: AutoCollectPerformance | null;
 
     private static _totalRequestCount: number = 0;
     private static _totalFailedRequestCount: number = 0;
@@ -21,7 +21,7 @@ class AutoCollectPerformance {
     private _enableLiveMetricsCounters: boolean;
     private _collectionInterval: number;
     private _client: TelemetryClient;
-    private _handle: NodeJS.Timer;
+    private _handle: NodeJS.Timer | undefined;
     private _isEnabled: boolean;
     private _isInitialized: boolean;
     private _lastAppCpuUsage: { user: number; system: number };
@@ -207,7 +207,7 @@ class AutoCollectPerformance {
             }
 
             // Calculate % of total cpu time (user + system) this App Process used (Only supported by node v6.1.0+)
-            let appCpuPercent: number = undefined;
+            let appCpuPercent: number | undefined = undefined;
             if (typeof (process as any).cpuUsage === "function") {
                 const appCpuUsage = (process as any).cpuUsage();
                 const hrtime = process.hrtime();

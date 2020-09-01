@@ -14,6 +14,7 @@ describe("diagnostic-channel/winston", () => {
         AppInsights.setup("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333");
         AppInsights.start();
 
+        assert.ok(AppInsights.defaultClient);
         const trackExceptionStub = sinon.stub(AppInsights.defaultClient, "trackException");
         const trackTraceStub = sinon.stub(AppInsights.defaultClient, "trackTrace");
 

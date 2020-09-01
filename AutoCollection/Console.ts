@@ -8,7 +8,7 @@ class AutoCollectConsole {
         [name: string]: (message?: any, ...optionalParams: any[]) => void;
     };
 
-    public static INSTANCE: AutoCollectConsole;
+    public static INSTANCE: AutoCollectConsole | null;
     private static _methodNames = ["debug", "info", "log", "warn", "error"];
 
     private _client: TelemetryClient;

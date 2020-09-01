@@ -19,7 +19,7 @@ export interface DependencyTelemetry extends Telemetry {
     /**
      * Remote call name
      */
-    name: string | null;
+    name: string | undefined;
 
     /**
      * Remote call data. This is the most detailed information about the call, such as full URL or SQL statement

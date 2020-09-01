@@ -54,7 +54,7 @@ class TelemetryClient {
     }
 
     public setupSpanExporter() {
-        if (!TelemetryClient._azureExporterSetup) {
+        if (!TelemetryClient._azureExporterSetup && Provider.instance) {
             Provider.instance.addSpanProcessor(
                 new tracing.BatchSpanProcessor(
                     new AzureMonitorTraceExporter({
@@ -169,10 +169,10 @@ class TelemetryClient {
             // url.parse().host returns null for non-urls,
             // making this essentially a no-op in those cases
             // If this logic is moved, update jsdoc in DependencyTelemetry.target
-            telemetry.target = url.parse(telemetry.data).host;
+            telemetry.target = url.parse(telemetry.data).host ?? undefined;
         }
         const startTime = telemetry.time?.getTime() ?? Date.now() - telemetry.duration;
-        const span = Provider.tracer.startSpan(telemetry.name, {
+        const span = Provider.tracer.startSpan(telemetry.name ?? "Dependency", {
             parent: Provider.tracer.getCurrentSpan(),
             kind: opentelemetry.SpanKind.SERVER,
             startTime,
@@ -225,14 +225,14 @@ class TelemetryClient {
                 envelope.time = telemetry.time.toISOString();
             }
 
-            let accepted = this.runTelemetryProcessors(envelope, telemetry.contextObjects);
+            let accepted = this.runTelemetryProcessors(envelope, telemetry.contextObjects ?? {});
 
             // Ideally we would have a central place for "internal" telemetry processors and users can configure which ones are in use.
             // This will do for now. Otherwise clearTelemetryProcessors() would be problematic.
             accepted =
                 accepted &&
                 TelemetryProcessors.samplingTelemetryProcessor(envelope, {
-                    correlationContext: Provider.tracer?.getCurrentSpan()?.context(),
+                    correlationContext: Provider.tracer?.getCurrentSpan()?.context() ?? null,
                 });
 
             if (accepted) {

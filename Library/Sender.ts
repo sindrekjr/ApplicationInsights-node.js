@@ -15,7 +15,7 @@ class Sender {
     private static ICACLS_PATH = `${process.env.systemdrive}/windows/system32/icacls.exe`;
     private static POWERSHELL_PATH = `${process.env.systemdrive}/windows/system32/windowspowershell/v1.0/powershell.exe`;
     private static ACLED_DIRECTORIES: { [id: string]: boolean } = {};
-    private static ACL_IDENTITY: string = null;
+    private static ACL_IDENTITY: string;
 
     // the amount of time the SDK will wait between resending cached data, this buffer is to avoid any throttling from the service side
     public static WAIT_BETWEEN_RESEND = 60 * 1000;
@@ -26,9 +26,8 @@ class Sender {
     public static USE_ICACLS = os.type() === "Windows_NT";
 
     private _config: Config;
-    private _storageDirectory: string;
     private _onSuccess: (response: string) => void;
-    private _onError: (error: Error) => void;
+    private _onError: (error: Error | null) => void;
     private _enableDiskRetryMode: boolean;
     private _numConsecutiveFailures: number;
     private _resendTimer: NodeJS.Timer | null;
@@ -37,8 +36,8 @@ class Sender {
 
     constructor(
         config: Config,
-        onSuccess?: (response: string) => void,
-        onError?: (error: Error) => void
+        onSuccess: (response: string) => void = () => {},
+        onError: (error: Error | null) => void = () => {}
     ) {
         this._config = config;
         this._onSuccess = onSuccess;
@@ -223,7 +222,7 @@ class Sender {
         }
     }
 
-    private _runICACLS(args: string[], callback: (err: Error) => void) {
+    private _runICACLS(args: string[], callback: (err: Error | null) => void) {
         const aclProc = child_process.spawn(Sender.ICACLS_PATH, args, <any>{ windowsHide: true });
         aclProc.on("error", (e: Error) => callback(e));
         aclProc.on("close", (code: number, signal: string) => {
@@ -255,7 +254,7 @@ class Sender {
         }
     }
 
-    private _getACLIdentity(callback: (error: Error, identity: string) => void) {
+    private _getACLIdentity(callback: (error: Error | null, identity: string | null) => void) {
         if (Sender.ACL_IDENTITY) {
             return callback(null, Sender.ACL_IDENTITY);
         }
@@ -269,7 +268,7 @@ class Sender {
         );
         let data = "";
         psProc.stdout.on("data", (d: string) => (data += d));
-        psProc.on("error", (e: Error) => callback(e, null));
+        psProc.on("error", (e: Error | null) => callback(e, null));
         psProc.on("close", (code: number, signal: string) => {
             Sender.ACL_IDENTITY = data && data.trim();
             return callback(
@@ -311,7 +310,7 @@ class Sender {
         }
     }
 
-    private _getACLArguments(directory: string, identity: string) {
+    private _getACLArguments(directory: string, identity: string | null) {
         return [
             directory,
             "/grant",
@@ -322,7 +321,7 @@ class Sender {
         ]; // Remove all inherited permissions
     }
 
-    private _applyACLRules(directory: string, callback: (err: Error) => void) {
+    private _applyACLRules(directory: string, callback: (err: Error | null) => void) {
         if (!Sender.USE_ICACLS) {
             return callback(null);
         }
@@ -371,7 +370,7 @@ class Sender {
 
     private _confirmDirExists(
         directory: string,
-        callback: (err: NodeJS.ErrnoException) => void
+        callback: (err: NodeJS.ErrnoException | null) => void
     ): void {
         fs.lstat(directory, (err, stats) => {
             if (err && err.code === "ENOENT") {
@@ -396,7 +395,7 @@ class Sender {
      */
     private _getShallowDirectorySize(
         directory: string,
-        callback: (err: NodeJS.ErrnoException, size: number) => void
+        callback: (err: NodeJS.ErrnoException | null, size: number) => void
     ) {
         // Get the directory listing
         fs.readdir(directory, (err, files) => {
@@ -404,7 +403,7 @@ class Sender {
                 return callback(err, -1);
             }
 
-            let error: NodeJS.ErrnoException = null;
+            let error: NodeJS.ErrnoException | null = null;
             let totalSize = 0;
             let count = 0;
 
@@ -594,7 +593,7 @@ class Sender {
         });
     }
 
-    private _onErrorHelper(error: Error): void {
+    private _onErrorHelper(error: Error | null): void {
         if (typeof this._onError === "function") {
             this._onError(error);
         }
