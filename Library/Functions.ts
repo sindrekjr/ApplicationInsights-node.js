@@ -4,7 +4,7 @@
  * to your function from the Azure Functions runtime on function invocation.
  */
 export interface Context {
-    traceContext: TraceContext
+    traceContext: TraceContext;
 }
 
 /**
@@ -27,7 +27,10 @@ export interface TraceContext {
     /** Extends traceparent with vendor-specific data. */
     tracestate: string | null | undefined;
     /** Holds additional properties being sent as part of request telemetry. */
-    attributes: {
-        [k: string]: string;
-    } | null | undefined;
+    attributes:
+        | {
+              [k: string]: string;
+          }
+        | null
+        | undefined;
 }

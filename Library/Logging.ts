@@ -1,7 +1,6 @@
-import Provider from './Provider';
+import Provider from "./Provider";
 
 class Logging {
-
     private static TAG = "ApplicationInsights:";
 
     private static get _logger() {

@@ -15,34 +15,34 @@ class ChannelMock extends Channel {
 }
 
 describe("Library/Channel", () => {
-
-    var testEnvelope = new Contracts.Envelope();
-    var sender = {
+    const testEnvelope = new Contracts.Envelope();
+    const sender = {
         saveOnCrash: <(s: string) => void>((str) => null),
-        send: <(b: Buffer) => void>((buffer) => null)
+        send: <(b: Buffer) => void>((buffer) => null),
     };
 
-    var sendSpy = sinon.spy(sender, "send");
-    var saveSpy = sinon.spy(sender, "saveOnCrash");
+    const sendSpy = sinon.spy(sender, "send");
+    const saveSpy = sinon.spy(sender, "saveOnCrash");
 
-    var channel:ChannelMock;
-    var config: any;
-    var clock: any;
-    before(() => clock = sinon.useFakeTimers());
+    let channel: ChannelMock;
+    let config: any;
+    let clock: any;
+    before(() => (clock = sinon.useFakeTimers()));
     after(() => clock.restore());
 
     beforeEach(() => {
         config = {
             isDisabled: false,
             batchSize: 3,
-            batchInterval: 10
+            batchInterval: 10,
         };
 
         channel = new ChannelMock(
             () => config.isDisabled,
             () => config.batchSize,
             () => config.batchInterval,
-            <any>sender);
+            <any>sender
+        );
     });
 
     afterEach(() => {
@@ -66,7 +66,7 @@ describe("Library/Channel", () => {
         });
 
         it("should log warning if invalid input is passed", () => {
-            var warnStub = sinon.stub(console, "warn");
+            const warnStub = sinon.stub(console, "warn");
             channel.send(undefined);
             channel.send(null);
             channel.send(<any>"");
@@ -75,17 +75,17 @@ describe("Library/Channel", () => {
         });
 
         it("should not crash JSON.stringify", () => {
-            var a = <any>{b: null};
+            const a = <any>{ b: null };
             a.b = a;
 
-            var warnStub = sinon.stub(console, "warn");
+            const warnStub = sinon.stub(console, "warn");
             assert.doesNotThrow(() => channel.send(a));
             assert.ok(warnStub.calledOnce);
             warnStub.restore();
         });
 
         it("should flush the buffer when full", () => {
-            for (var i = 0; i < config.batchSize; i++) {
+            for (let i = 0; i < config.batchSize; i++) {
                 channel.send(testEnvelope);
             }
 
@@ -106,7 +106,7 @@ describe("Library/Channel", () => {
         });
 
         it("should clear timeout handle after flushing", () => {
-            for (var i = 0; i < config.batchSize; i++) {
+            for (let i = 0; i < config.batchSize; i++) {
                 channel.send(testEnvelope);
             }
 
@@ -138,14 +138,14 @@ describe("Library/Channel", () => {
         });
 
         it("should format X-JSON by default", () => {
-            var first: any = { "first": true };
-            var second: any = { "second": true };
+            const first: any = { first: true };
+            const second: any = { second: true };
             channel.send(first);
             channel.send(second);
             channel.triggerSend(true);
             assert.ok(sendSpy.notCalled);
             assert.ok(saveSpy.calledOnce);
-            assert.ok(saveSpy.calledWith(JSON.stringify(first) + "\n" + JSON.stringify(second)))
+            assert.ok(saveSpy.calledWith(JSON.stringify(first) + "\n" + JSON.stringify(second)));
         });
 
         it("should not send if empty", () => {
@@ -155,14 +155,14 @@ describe("Library/Channel", () => {
         });
 
         it("should call callback when empty", () => {
-            var callback = sinon.spy();
+            const callback = sinon.spy();
             channel.triggerSend(false, callback);
             assert.ok(callback.calledOnce);
         });
 
         it("should call callback when crashing", () => {
             channel.send(testEnvelope);
-            var callback = sinon.spy();
+            const callback = sinon.spy();
             channel.triggerSend(true, callback);
             assert.ok(callback.calledOnce);
         });

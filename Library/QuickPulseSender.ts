@@ -11,7 +11,7 @@ import * as Contracts from "../Declarations/Contracts";
 const QuickPulseConfig = {
     method: "POST",
     time: "x-ms-qps-transmission-time",
-    subscribed: "x-ms-qps-subscribed"
+    subscribed: "x-ms-qps-subscribed",
 };
 
 class QuickPulseSender {
@@ -26,30 +26,39 @@ class QuickPulseSender {
         this._consecutiveErrors = 0;
     }
 
-    public ping(envelope: Contracts.EnvelopeQuickPulse, done: (shouldPOST?: boolean, res?: http.IncomingMessage) => void): void {
+    public ping(
+        envelope: Contracts.EnvelopeQuickPulse,
+        done: (shouldPOST?: boolean, res?: http.IncomingMessage) => void
+    ): void {
         this._submitData(envelope, done, "ping");
     }
 
-    public post(envelope: Contracts.EnvelopeQuickPulse, done: (shouldPOST?: boolean, res?: http.IncomingMessage) => void): void {
-
+    public post(
+        envelope: Contracts.EnvelopeQuickPulse,
+        done: (shouldPOST?: boolean, res?: http.IncomingMessage) => void
+    ): void {
         // Important: When POSTing data, envelope must be an array
         this._submitData([envelope], done, "post");
     }
 
-    private _submitData(envelope: Contracts.EnvelopeQuickPulse | Contracts.EnvelopeQuickPulse[], done: (shouldPOST?: boolean, res?: http.IncomingMessage) => void, postOrPing: "post" | "ping"): void {
+    private _submitData(
+        envelope: Contracts.EnvelopeQuickPulse | Contracts.EnvelopeQuickPulse[],
+        done: (shouldPOST?: boolean, res?: http.IncomingMessage) => void,
+        postOrPing: "post" | "ping"
+    ): void {
         const payload = JSON.stringify(envelope);
-        var options = {
+        const options = {
             // @todo: implement "ignore" header
             // [AutoCollectHttpDependencies.disableCollectionRequestOption]: true,
             host: this._config.quickPulseHost,
             method: QuickPulseConfig.method,
             path: `/QuickPulseService.svc/${postOrPing}?ikey=${this._config.instrumentationKey}`,
-            headers:{
-                'Expect': '100-continue',
+            headers: {
+                Expect: "100-continue",
                 [QuickPulseConfig.time]: QuickPulseUtil.getTransmissionTime(), // unit = 100s of nanoseconds
-                'Content-Type': 'application\/json',
-                'Content-Length': Buffer.byteLength(payload)
-            }
+                "Content-Type": "application/json",
+                "Content-Length": Buffer.byteLength(payload),
+            },
         };
 
         // HTTPS only

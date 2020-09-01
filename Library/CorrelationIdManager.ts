@@ -1,6 +1,6 @@
-import https = require('https');
-import http = require('http');
-import url = require('url');
+import https = require("https");
+import http = require("http");
+import url = require("url");
 
 import Util = require("./Util");
 import Logging = require("./Logging");
@@ -14,8 +14,8 @@ class CorrelationIdManager {
 
     // To avoid extraneous HTTP requests, we maintain a queue of callbacks waiting on a particular appId lookup,
     // as well as a cache of completed lookups so future requests can be resolved immediately.
-    private static pendingLookups: {[key: string]: Function[]} = {};
-    private static completedLookups: {[key: string]: string} = {};
+    private static pendingLookups: { [key: string]: Function[] } = {};
+    private static completedLookups: { [key: string]: string } = {};
 
     private static requestIdMaxLength = 1024;
     private static currentRootId = Util.randomu32();
@@ -43,10 +43,10 @@ class CorrelationIdManager {
             }
 
             const requestOptions = {
-                method: 'GET',
+                method: "GET",
                 // Ensure this request is not captured by auto-collection.
                 // Note: we don't refer to the property in HttpDependencyParser because that would cause a cyclical dependency
-                disableAppInsightsAutoCollection: true
+                disableAppInsightsAutoCollection: true,
             };
 
             Logging.info(CorrelationIdManager.TAG, requestOptions);
@@ -55,15 +55,17 @@ class CorrelationIdManager {
                     // Success; extract the appId from the body
                     let appId = "";
                     res.setEncoding("utf-8");
-                    res.on('data', (data: any) => {
+                    res.on("data", (data: any) => {
                         appId += data;
                     });
-                    res.on('end', () => {
+                    res.on("end", () => {
                         Logging.info(CorrelationIdManager.TAG, appId);
                         const result = CorrelationIdManager.correlationIdPrefix + appId;
                         CorrelationIdManager.completedLookups[appIdUrlString] = result;
                         if (CorrelationIdManager.pendingLookups[appIdUrlString]) {
-                            CorrelationIdManager.pendingLookups[appIdUrlString].forEach((cb) => cb(result));
+                            CorrelationIdManager.pendingLookups[appIdUrlString].forEach((cb) =>
+                                cb(result)
+                            );
                         }
                         delete CorrelationIdManager.pendingLookups[appIdUrlString];
                     });
@@ -77,7 +79,7 @@ class CorrelationIdManager {
                 }
             });
             if (req) {
-                req.on('error', (error: Error) => {
+                req.on("error", (error: Error) => {
                     // Unable to contact endpoint.
                     // Do nothing for now.
                     Logging.warn(CorrelationIdManager.TAG, error);
@@ -88,11 +90,16 @@ class CorrelationIdManager {
         setTimeout(fetchAppId, 0);
     }
 
-    public static cancelCorrelationIdQuery(config: Config, callback: (correlationId: string) => void) {
+    public static cancelCorrelationIdQuery(
+        config: Config,
+        callback: (correlationId: string) => void
+    ) {
         const appIdUrlString = `${config.profileQueryEndpoint}/api/profiles/${config.instrumentationKey}/appId`;
         const pendingLookups = CorrelationIdManager.pendingLookups[appIdUrlString];
         if (pendingLookups) {
-            CorrelationIdManager.pendingLookups[appIdUrlString] = pendingLookups.filter((cb) => cb != callback);
+            CorrelationIdManager.pendingLookups[appIdUrlString] = pendingLookups.filter(
+                (cb) => cb != callback
+            );
             if (CorrelationIdManager.pendingLookups[appIdUrlString].length == 0) {
                 delete CorrelationIdManager.pendingLookups[appIdUrlString];
             }
@@ -105,14 +112,14 @@ class CorrelationIdManager {
      */
     public static generateRequestId(parentId: string): string {
         if (parentId) {
-            parentId = parentId[0] == '|' ? parentId : '|' + parentId;
-            if (parentId[parentId.length -1] !== '.') {
-                parentId += '.';
+            parentId = parentId.startsWith("|") ? parentId : "|" + parentId;
+            if (!parentId.endsWith(".")) {
+                parentId += ".";
             }
 
             const suffix = (CorrelationIdManager.currentRootId++).toString(16);
 
-            return CorrelationIdManager.appendSuffix(parentId, suffix, '_')
+            return CorrelationIdManager.appendSuffix(parentId, suffix, "_");
         } else {
             return CorrelationIdManager.generateRootId();
         }
@@ -124,17 +131,17 @@ class CorrelationIdManager {
      * @param id
      */
     public static getRootId(id: string): string {
-        let endIndex = id.indexOf('.');
+        let endIndex = id.indexOf(".");
         if (endIndex < 0) {
             endIndex = id.length;
         }
 
-        const startIndex = id[0] === '|' ? 1 : 0;
+        const startIndex = id.startsWith("|") ? 1 : 0;
         return id.substring(startIndex, endIndex);
     }
 
     private static generateRootId(): string {
-        return '|' + Util.w3cTraceId() + '.';
+        return "|" + Util.w3cTraceId() + ".";
     }
 
     private static appendSuffix(parentId: string, suffix: string, delimiter: string): string {
@@ -147,9 +154,9 @@ class CorrelationIdManager {
         // overflow delimiter '#'
         let trimPosition = CorrelationIdManager.requestIdMaxLength - 9;
         if (parentId.length > trimPosition) {
-            for(; trimPosition > 1; --trimPosition) {
-                const c = parentId[trimPosition-1];
-                if (c === '.' || c === '_') {
+            for (; trimPosition > 1; --trimPosition) {
+                const c = parentId[trimPosition - 1];
+                if (c === "." || c === "_") {
                     break;
                 }
             }
@@ -162,9 +169,9 @@ class CorrelationIdManager {
 
         suffix = Util.randomu32().toString(16);
         while (suffix.length < 8) {
-            suffix = '0' + suffix;
+            suffix = "0" + suffix;
         }
-        return parentId.substring(0,trimPosition) + suffix + '#';
+        return parentId.substring(0, trimPosition) + suffix + "#";
     }
 }
 

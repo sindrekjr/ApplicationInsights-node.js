@@ -1,9 +1,9 @@
 import Provider from "../../Library/Provider";
 import * as assert from "assert";
+// eslint-disable-next-line node/no-missing-import
 import { DEFAULT_INSTRUMENTATION_PLUGINS } from "@opentelemetry/node/build/src/config";
 
 describe("Provider", () => {
-
     afterEach(() => {
         Provider.dispose();
     });

@@ -5,7 +5,10 @@ import AutoCollectPerformance = require("./AutoCollection/Performance");
 import Logging = require("./Library/Logging");
 import QuickPulseClient = require("./Library/QuickPulseStateManager");
 
-import { AutoCollectNativePerformance, IDisabledExtendedMetrics } from "./AutoCollection/NativePerformance";
+import {
+    AutoCollectNativePerformance,
+    IDisabledExtendedMetrics,
+} from "./AutoCollection/NativePerformance";
 
 // We export these imports so that SDK users may use these classes directly.
 // They're exposed using "export import" so that types are passed along as expected
@@ -13,7 +16,7 @@ export import TelemetryClient = require("./Library/TelemetryClient");
 export import Contracts = require("./Declarations/Contracts");
 import { LogLevel, parseTraceParent } from "@opentelemetry/core";
 
-import type * as azureFunctionsTypes from "./Library/Functions";
+import type { Context, HttpRequest } from "./Library/Functions";
 import type { NodeTracerProvider } from "@opentelemetry/node";
 import type { Tracer, SpanContext } from "@opentelemetry/api";
 import type { IncomingMessage } from "http";
@@ -25,12 +28,12 @@ export enum DistributedTracingModes {
      * (Default) Send Application Insights correlation headers
      */
 
-    AI=0,
+    AI = 0,
 
     /**
      * Send both W3C Trace Context headers and back-compatibility Application Insights headers
      */
-    AI_AND_W3C
+    AI_AND_W3C,
 }
 
 // Default autocollection configuration
@@ -38,14 +41,13 @@ let _isConsole = true;
 let _isConsoleLog = false;
 let _isExceptions = true;
 let _isPerformance = true;
-let _isHeartBeat = false; // off by default for now
 let _isDiskRetry = true;
 let _isSendingLiveMetrics = false; // Off by default
 let _isNativePerformance = true;
 let _disabledExtendedMetrics: IDisabledExtendedMetrics;
 
-let _diskRetryInterval: number = undefined;
-let _diskRetryMaxBytes: number = undefined;
+let _diskRetryInterval: number | undefined = undefined;
+let _diskRetryMaxBytes: number | undefined = undefined;
 
 let _console: AutoCollectConsole;
 let _exceptions: AutoCollectExceptions;
@@ -55,13 +57,13 @@ let _nativePerformance: AutoCollectNativePerformance;
 let _isStarted = false;
 
 /**
-* The default client, initialized when setup was called. To initialize a different client
-* with its own configuration, use `new TelemetryClient(instrumentationKey?)`.
-*/
+ * The default client, initialized when setup was called. To initialize a different client
+ * with its own configuration, use `new TelemetryClient(instrumentationKey?)`.
+ */
 export let provider: NodeTracerProvider;
 export let tracer: Tracer;
-export let defaultClient: TelemetryClient;
-export let liveMetricsClient: QuickPulseClient;
+export let defaultClient: TelemetryClient | null;
+export let liveMetricsClient: QuickPulseClient | null;
 let _performanceLiveMetrics: AutoCollectPerformance;
 
 /**
@@ -75,7 +77,7 @@ let _performanceLiveMetrics: AutoCollectPerformance;
  * and start the SDK.
  */
 export function setup(setupString?: string) {
-    if(!defaultClient) {
+    if (!defaultClient) {
         defaultClient = new TelemetryClient(setupString);
         _console = new AutoCollectConsole(defaultClient);
         _exceptions = new AutoCollectExceptions(defaultClient);
@@ -87,12 +89,17 @@ export function setup(setupString?: string) {
         Logging.info("The default client is already setup");
     }
     if (defaultClient && defaultClient.channel) {
-        defaultClient.channel.setUseDiskRetryCaching(_isDiskRetry, _diskRetryInterval, _diskRetryMaxBytes);
+        defaultClient.channel.setUseDiskRetryCaching(
+            _isDiskRetry,
+            _diskRetryInterval,
+            _diskRetryMaxBytes
+        );
     }
 
     return Configuration;
 }
 
+// eslint-disable-next-line @typescript-eslint/unbound-method
 export const setInstrumentationPlugin = Provider.setInstrumentationPlugin;
 
 /**
@@ -104,10 +111,10 @@ export const setInstrumentationPlugin = Provider.setInstrumentationPlugin;
 export function start() {
     if (!tracer) {
         provider = Provider.start();
-        defaultClient.setupSpanExporter();
+        defaultClient!.setupSpanExporter();
         tracer = provider.getTracer("applicationinsights");
     }
-    if(!!defaultClient) {
+    if (!!defaultClient) {
         _isStarted = true;
         _console.enable(_isConsole, _isConsoleLog);
         _exceptions.enable(_isExceptions);
@@ -144,12 +151,14 @@ export function getCorrelationContext(): CorrelationContext | null {
  * **(Experimental!)**
  * Starts a fresh context or propagates the current internal one.
  */
-export function startOperation(context: azureFunctionsTypes.Context | (IncomingMessage | azureFunctionsTypes.HttpRequest)): CorrelationContext | null {
-    const traceContext = (context as azureFunctionsTypes.Context)?.traceContext ?? null;
-    const traceparentHeader = (context as azureFunctionsTypes.HttpRequest).headers?.traceparent;
-    let spanContext: SpanContext;
-    if (traceContext) {
-        spanContext = parseTraceParent(traceContext.traceparent);
+export function startOperation(
+    context: Context | (IncomingMessage | HttpRequest)
+): CorrelationContext | null {
+    const traceContext = (context as Context)?.traceContext ?? null;
+    const traceparentHeader = (context as HttpRequest).headers?.traceparent;
+    let spanContext: SpanContext | null;
+    if (traceContext && traceContext.traceparent) {
+        spanContext = parseTraceParent(traceContext.traceparent)!;
     } else {
         spanContext = traceparentHeader ? parseTraceParent(traceparentHeader) : null;
     }
@@ -183,7 +192,7 @@ export class Configuration {
     public static setAutoCollectConsole(value: boolean, collectConsoleLog: boolean = false) {
         _isConsole = value;
         _isConsoleLog = collectConsoleLog;
-        if (_isStarted){
+        if (_isStarted) {
             _console.enable(value, collectConsoleLog);
         }
 
@@ -197,7 +206,7 @@ export class Configuration {
      */
     public static setAutoCollectExceptions(value: boolean) {
         _isExceptions = value;
-        if (_isStarted){
+        if (_isStarted) {
             _exceptions.enable(value);
         }
 
@@ -210,14 +219,22 @@ export class Configuration {
      * @param collectExtendedMetrics if true, extended metrics counters will be collected every minute and sent to Application Insights
      * @returns {Configuration} this class
      */
-    public static setAutoCollectPerformance(value: boolean, collectExtendedMetrics: boolean | IDisabledExtendedMetrics = true) {
+    public static setAutoCollectPerformance(
+        value: boolean,
+        collectExtendedMetrics: boolean | IDisabledExtendedMetrics = true
+    ) {
         _isPerformance = value;
-        const extendedMetricsConfig = AutoCollectNativePerformance.parseEnabled(collectExtendedMetrics);
+        const extendedMetricsConfig = AutoCollectNativePerformance.parseEnabled(
+            collectExtendedMetrics
+        );
         _isNativePerformance = extendedMetricsConfig.isEnabled;
         _disabledExtendedMetrics = extendedMetricsConfig.disabledMetrics;
         if (_isStarted) {
             _performance.enable(value);
-            _nativePerformance.enable(extendedMetricsConfig.isEnabled, extendedMetricsConfig.disabledMetrics);
+            _nativePerformance.enable(
+                extendedMetricsConfig.isEnabled,
+                extendedMetricsConfig.disabledMetrics
+            );
         }
 
         return Configuration;
@@ -242,7 +259,7 @@ export class Configuration {
      */
     public static setAutoCollectRequests(value: boolean) {
         Logging.warn(
-            "setAutoCollectRequests is deprecated. Please configure enable/disable HTTP tracking using @opentelemetry/plugin-http(s) plugins. This function setAutoCollectRequests(...) is now a No-op.",
+            "setAutoCollectRequests is deprecated. Please configure enable/disable HTTP tracking using @opentelemetry/plugin-http(s) plugins. This function setAutoCollectRequests(...) is now a No-op."
         );
         Provider.setInstrumentationPlugin("http", value);
         Provider.setInstrumentationPlugin("https", value);
@@ -258,7 +275,7 @@ export class Configuration {
      */
     public static setAutoCollectDependencies(value: boolean) {
         Logging.warn(
-            "setAutoCollectDependencies is deprecated. Please configure enable/disable using @opentelemetry/plugin-http(s) plugins. This function setAutoCollectDependencies(...) is now a No-op.",
+            "setAutoCollectDependencies is deprecated. Please configure enable/disable using @opentelemetry/plugin-http(s) plugins. This function setAutoCollectDependencies(...) is now a No-op."
         );
         Provider.setInstrumentationPlugin("http", value);
         Provider.setInstrumentationPlugin("https", value);
@@ -286,11 +303,15 @@ export class Configuration {
      * @param maxBytesOnDisk The maximum size (in bytes) that the created temporary directory for cache events can grow to, before caching is disabled.
      * @returns {Configuration} this class
      */
-    public static setUseDiskRetryCaching(value: boolean, resendInterval?: number, maxBytesOnDisk?: number) {
+    public static setUseDiskRetryCaching(
+        value: boolean,
+        resendInterval?: number,
+        maxBytesOnDisk?: number
+    ) {
         _isDiskRetry = value;
         _diskRetryInterval = resendInterval;
-        _diskRetryMaxBytes = maxBytesOnDisk
-        if (defaultClient && defaultClient.channel){
+        _diskRetryMaxBytes = maxBytesOnDisk;
+        if (defaultClient && defaultClient.channel) {
             defaultClient.channel.setUseDiskRetryCaching(value, resendInterval, maxBytesOnDisk);
         }
 
@@ -304,16 +325,18 @@ export class Configuration {
      * @returns {Configuration} this class
      */
     public static setInternalLogging(enableDebugLogging = false, enableWarningLogging = true) {
-        Provider.loggingLevel = enableDebugLogging ? LogLevel.DEBUG
-            : enableWarningLogging ? LogLevel.WARN
+        Provider.loggingLevel = enableDebugLogging
+            ? LogLevel.DEBUG
+            : enableWarningLogging
+            ? LogLevel.WARN
             : LogLevel.ERROR;
         return Configuration;
     }
 
     public static setDistributedTracingMode(mode: DistributedTracingModes) {
         Logging.warn(
-            "setDistributedTracingMode(...) is deprecated. W3C Trace Context mode is enabled and legacy AI headers will no longer be parsed",
-        )
+            "setDistributedTracingMode(...) is deprecated. W3C Trace Context mode is enabled and legacy AI headers will no longer be parsed"
+        );
         return Configuration;
     }
 
@@ -331,7 +354,11 @@ export class Configuration {
         if (!liveMetricsClient && enable) {
             // No qps client exists. Create one and prepare it to be enabled at .start()
             liveMetricsClient = new QuickPulseClient(defaultClient.config.instrumentationKey);
-            _performanceLiveMetrics = new AutoCollectPerformance(liveMetricsClient as any, 1000, true);
+            _performanceLiveMetrics = new AutoCollectPerformance(
+                liveMetricsClient as any,
+                1000,
+                true
+            );
             liveMetricsClient.addCollector(_performanceLiveMetrics);
             defaultClient.quickPulseClient = liveMetricsClient; // Need this so we can forward all manual tracks to live metrics via PerformanceMetricsTelemetryProcessor
         } else if (liveMetricsClient) {
@@ -346,7 +373,7 @@ export class Configuration {
 
 /**
  * Disposes the default client and all the auto collectors so they can be reinitialized with different configuration
-*/
+ */
 export function dispose() {
     defaultClient = null;
     Provider.dispose();
@@ -363,10 +390,9 @@ export function dispose() {
     if (_nativePerformance) {
         _nativePerformance.dispose();
     }
-    if(liveMetricsClient) {
+    if (liveMetricsClient) {
         liveMetricsClient.enable(false);
         _isSendingLiveMetrics = false;
-        liveMetricsClient = undefined;
+        liveMetricsClient = null;
     }
-
 }

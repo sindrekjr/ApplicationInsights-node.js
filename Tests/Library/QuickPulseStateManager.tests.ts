@@ -2,7 +2,6 @@ import assert = require("assert");
 import sinon = require("sinon");
 
 import QuickPulseClient = require("../../Library/QuickPulseStateManager");
-import { AssertionError } from "assert";
 
 describe("Library/QuickPulseStateManager", () => {
     describe("#constructor", () => {
@@ -24,7 +23,6 @@ describe("Library/QuickPulseStateManager", () => {
             assert.ok(qps["_documents"].length === 0);
             assert.ok(qps["_collectors"].length === 0);
         });
-
     });
 
     describe("#enable", () => {
@@ -32,9 +30,9 @@ describe("Library/QuickPulseStateManager", () => {
 
         beforeEach(() => {
             qps = new QuickPulseClient("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333");
-        })
+        });
         afterEach(() => {
-            qps = null;
+            qps = null as any;
         });
         it("should call _goQuickPulse() when isEnabled == true", () => {
             const qpsStub = sinon.stub(qps as any, "_goQuickPulse");
@@ -50,30 +48,32 @@ describe("Library/QuickPulseStateManager", () => {
         it("should clear timeout handle when isEnabled == false", () => {
             assert.equal(qps["_handle"], undefined);
             qps["_isEnabled"] = true;
-            (<any>qps["_handle"]) = setTimeout(()=>{ throw new Error("this error should be cancelled") }, 1000);
+            (<any>qps["_handle"]) = setTimeout(() => {
+                throw new Error("this error should be cancelled");
+            }, 1000);
             <any>qps["_handle"].unref();
             assert.ok(qps["_handle"]);
 
             qps.enable(false);
             assert.equal(qps["_handle"], undefined);
             assert.equal(qps["_isEnabled"], false);
-        })
+        });
     });
 
     describe("#reset", () => {
         it("should reset metric and document buffers", () => {
-            let qps = new QuickPulseClient("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333");
-            (<any>qps["_metrics"]) = {foo: "bar"};
-            (<any>qps["_documents"]) = [{foo: "bar"}];
+            const qps = new QuickPulseClient("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333");
+            (<any>qps["_metrics"]) = { foo: "bar" };
+            (<any>qps["_documents"]) = [{ foo: "bar" }];
 
             assert.ok(qps["_metrics"].foo);
-            assert.ok(qps["_documents"].length > 0)
+            assert.ok(qps["_documents"].length > 0);
             assert.ok((<any>qps["_documents"][0]).foo);
 
             qps["_resetQuickPulseBuffer"]();
             assert.ok(!qps["_metrics"].foo);
-            assert.ok(qps["_documents"].length === 0)
-        })
+            assert.ok(qps["_documents"].length === 0);
+        });
     });
 
     describe("#_goQuickPulse", () => {
@@ -85,15 +85,15 @@ describe("Library/QuickPulseStateManager", () => {
             qps = new QuickPulseClient("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333");
             postStub = sinon.stub(qps as any, "_post");
             pingStub = sinon.stub(qps as any, "_ping");
-        })
+        });
         afterEach(() => {
-            qps = null;
+            qps = null!;
             postStub.restore();
             pingStub.restore();
         });
 
         it("should call _ping when not collecting data", () => {
-            qps.enable(true)
+            qps.enable(true);
 
             assert.ok(pingStub.calledOnce);
             assert.ok(postStub.notCalled);
@@ -106,7 +106,7 @@ describe("Library/QuickPulseStateManager", () => {
             assert.ok(postStub.notCalled);
 
             qps["_isCollectingData"] = true;
-            qps.enable(true)
+            qps.enable(true);
 
             assert.ok(postStub.calledOnce);
             assert.ok(pingStub.notCalled);

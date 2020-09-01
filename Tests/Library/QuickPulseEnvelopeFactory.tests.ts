@@ -1,5 +1,4 @@
 import assert = require("assert");
-import sinon = require("sinon");
 
 import Contracts = require("../../Declarations/Contracts");
 import Constants = require("../../Declarations/Constants");
@@ -7,7 +6,9 @@ import Constants = require("../../Declarations/Constants");
 describe("Library/QuickPulseEnvelopeFactory", () => {
     describe("QPS Constants", () => {
         it("should convert TelemetryTypeValues to QuickPulseType", () => {
-            const keys = Object.keys(Contracts.TelemetryTypeString);
+            const keys = Object.keys(Contracts.TelemetryTypeString) as Array<
+                Contracts.TelemetryTypeKeys
+            >;
             assert.ok(keys.length > 0);
             keys.forEach((key: Contracts.TelemetryTypeKeys) => {
                 const value = Contracts.TelemetryTypeString[key];
@@ -15,7 +16,7 @@ describe("Library/QuickPulseEnvelopeFactory", () => {
                 const qpsDocType = Constants.TelemetryTypeStringToQuickPulseDocumentType[value];
                 assert.equal(qpsType, Constants.QuickPulseType[key]);
                 assert.equal(qpsDocType, Constants.QuickPulseDocumentType[key]);
-            })
+            });
         });
     });
 });

@@ -12,7 +12,8 @@ let _logger: DiagnosticLogger = new DiagnosticLogger(console);
 let _statusLogger: StatusLogger = new StatusLogger(console);
 
 // Env var local constants
-const _setupString = process.env.APPLICATIONINSIGHTS_CONNECTION_STRING || process.env.APPINSIGHTS_INSTRUMENTATIONKEY;
+const _setupString =
+    process.env.APPLICATIONINSIGHTS_CONNECTION_STRING || process.env.APPINSIGHTS_INSTRUMENTATIONKEY;
 const forceStart = process.env.APPLICATIONINSIGHTS_FORCE_START === "true";
 
 // Other local constants
@@ -26,7 +27,7 @@ const defaultStatus: StatusContract = {
  * @param logger logger which implements the `AgentLogger` interface
  */
 export function setLogger(logger: DiagnosticLogger) {
-    return _logger = logger;
+    return (_logger = logger);
 }
 
 /**
@@ -52,13 +53,14 @@ export function setupAndStart(setupString = _setupString): typeof types | null {
             ...defaultStatus,
             AgentInitializedSuccessfully: false,
             SDKPresent: true,
-            Reason: "SDK already exists"
-        })
+            Reason: "SDK already exists",
+        });
         return null;
     }
 
     if (!setupString) {
-        const message = "Application Insights wanted to be started, but no Connection String or Instrumentation Key was provided";
+        const message =
+            "Application Insights wanted to be started, but no Connection String or Instrumentation Key was provided";
         _logger.logError(`${message} setupString: ${setupString}`);
         _statusLogger.logStatus({
             ...defaultStatus,
@@ -72,50 +74,64 @@ export function setupAndStart(setupString = _setupString): typeof types | null {
         _appInsights = require("../applicationinsights");
         if (_appInsights.defaultClient) {
             // setupAndStart was already called, return the result
-            _logger.logError("Setup was attempted on the Application Insights Client multiple times. Aborting and returning the first client instance");
+            _logger.logError(
+                "Setup was attempted on the Application Insights Client multiple times. Aborting and returning the first client instance"
+            );
             return _appInsights;
         }
 
-        const prefixInternalSdkVersion = function (envelope: types.Contracts.Envelope, _contextObjects: Object) {
+        const prefixInternalSdkVersion = function (
+            envelope: types.Contracts.Envelope,
+            _contextObjects: Object
+        ) {
             try {
-                var appInsightsSDKVersion = _appInsights.defaultClient.context.keys.internalSdkVersion;
-                envelope.tags[appInsightsSDKVersion] = _prefix + envelope.tags[appInsightsSDKVersion];
+                const appInsightsSDKVersion =
+                    _appInsights.defaultClient.context.keys.internalSdkVersion;
+                envelope.tags[appInsightsSDKVersion] =
+                    _prefix + envelope.tags[appInsightsSDKVersion];
             } catch (e) {
                 _logger.logError("Error prefixing SDK version", e);
             }
             return true;
-        }
+        };
 
-        const copyOverPrefixInternalSdkVersionToHeartBeatMetric = function (envelope: types.Contracts.Envelope, _contextObjects: Object) {
-            var appInsightsSDKVersion = _appInsights.defaultClient.context.keys.internalSdkVersion;
+        const copyOverPrefixInternalSdkVersionToHeartBeatMetric = function (
+            envelope: types.Contracts.Envelope,
+            _contextObjects: Object
+        ) {
+            const appInsightsSDKVersion =
+                _appInsights.defaultClient.context.keys.internalSdkVersion;
             const sdkVersion = envelope.tags[appInsightsSDKVersion] || "";
             if (envelope.name === Constants.HeartBeatMetricName) {
-                ((envelope.data as any).baseData).properties = ((envelope.data as any).baseData).properties || {};
-                ((envelope.data as any).baseData).properties["sdk"] = sdkVersion;
+                (envelope.data as any).baseData.properties =
+                    (envelope.data as any).baseData.properties || {};
+                (envelope.data as any).baseData.properties["sdk"] = sdkVersion;
             }
 
             return true;
-        }
+        };
 
         // Instrument the SDK
         _appInsights.setup(setupString).setSendLiveMetrics(true);
         _appInsights.defaultClient.addTelemetryProcessor(prefixInternalSdkVersion);
-        _appInsights.defaultClient.addTelemetryProcessor(copyOverPrefixInternalSdkVersionToHeartBeatMetric);
+        _appInsights.defaultClient.addTelemetryProcessor(
+            copyOverPrefixInternalSdkVersionToHeartBeatMetric
+        );
         _appInsights.start();
 
         // Agent successfully instrumented the SDK
         _logger.logMessage("Application Insights was started with setupString: " + setupString);
         _statusLogger.logStatus({
             ...defaultStatus,
-            AgentInitializedSuccessfully: true
+            AgentInitializedSuccessfully: true,
         });
     } catch (e) {
         _logger.logError("Error setting up Application Insights", e);
         _statusLogger.logStatus({
             ...defaultStatus,
             AgentInitializedSuccessfully: false,
-            Reason: `Error setting up Application Insights: ${e && e.message}`
-        })
+            Reason: `Error setting up Application Insights: ${e && e.message}`,
+        });
     }
     return _appInsights;
 }

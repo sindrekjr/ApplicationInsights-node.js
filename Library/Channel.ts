@@ -3,7 +3,6 @@ import Logging = require("./Logging");
 import Sender = require("./Sender");
 
 class Channel {
-
     protected _lastSend: number;
     protected _timeoutHandle: any;
 
@@ -14,7 +13,12 @@ class Channel {
     public _sender: Sender;
     public _buffer: string[];
 
-    constructor(isDisabled: () => boolean, getBatchSize: () => number, getBatchIntervalMs: () => number, sender: Sender) {
+    constructor(
+        isDisabled: () => boolean,
+        getBatchSize: () => number,
+        getBatchIntervalMs: () => number,
+        sender: Sender
+    ) {
         this._buffer = [];
         this._lastSend = 0;
         this._isDisabled = isDisabled;
@@ -31,7 +35,11 @@ class Channel {
      * @param maxBytesOnDisk The maximum size (in bytes) that the created temporary directory for cache events can grow to, before caching is disabled.
      * @returns {Configuration} this class
      */
-    public setUseDiskRetryCaching(value: boolean, resendInterval?: number, maxBytesOnDisk?: number) {
+    public setUseDiskRetryCaching(
+        value: boolean,
+        resendInterval?: number,
+        maxBytesOnDisk?: number
+    ) {
         this._sender.setDiskRetryMode(value, resendInterval, maxBytesOnDisk);
     }
 
@@ -39,7 +47,6 @@ class Channel {
      * Add a telemetry item to the send buffer
      */
     public send(envelope: Contracts.Envelope) {
-
         // if master off switch is set, don't send any data
         if (this._isDisabled()) {
             // Do not send/save data
@@ -53,7 +60,7 @@ class Channel {
         }
 
         // check if the incoming payload is too large, truncate if necessary
-        var payload: string = this._stringify(envelope);
+        const payload = this._stringify(envelope);
         if (typeof payload !== "string") {
             return;
         }
@@ -80,10 +87,10 @@ class Channel {
      * Immediately send buffered data
      */
     public triggerSend(isNodeCrashing: boolean, callback?: (v: string) => void) {
-        let bufferIsEmpty = this._buffer.length < 1;
+        const bufferIsEmpty = this._buffer.length < 1;
         if (!bufferIsEmpty) {
             // compose an array of payloads
-            var batch = this._buffer.join("\n");
+            const batch = this._buffer.join("\n");
 
             // invoke send
             if (isNodeCrashing) {
@@ -92,12 +99,12 @@ class Channel {
                     callback("data saved on crash");
                 }
             } else {
-                this._sender.send(Buffer.from ? Buffer.from(batch) : new Buffer(batch), callback);
+                this._sender.send(Buffer.from(batch), callback);
             }
         }
 
         // update lastSend time to enable throttling
-        this._lastSend = +new Date;
+        this._lastSend = +new Date();
 
         // clear buffer
         this._buffer.length = 0;
@@ -108,12 +115,13 @@ class Channel {
         }
     }
 
-    protected _stringify(envelope: Contracts.Envelope) {
+    protected _stringify(envelope: Contracts.Envelope): string | undefined {
         try {
             return JSON.stringify(envelope);
         } catch (error) {
             Logging.warn("Failed to serialize payload", error, envelope);
         }
+        return undefined;
     }
 }
 

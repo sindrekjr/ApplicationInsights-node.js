@@ -11,7 +11,7 @@ let clients: TelemetryClient[] = [];
 
 const winstonToAILevelMap: { [key: string]: (og: string) => number } = {
     syslog(og: string) {
-        const map: { [key: string ]: number } = {
+        const map: { [key: string]: number } = {
             emerg: SeverityLevel.Critical,
             alert: SeverityLevel.Critical,
             crit: SeverityLevel.Critical,
@@ -19,42 +19,42 @@ const winstonToAILevelMap: { [key: string]: (og: string) => number } = {
             warning: SeverityLevel.Warning,
             notice: SeverityLevel.Information,
             info: SeverityLevel.Information,
-            debug: SeverityLevel.Verbose
+            debug: SeverityLevel.Verbose,
         };
 
         return map[og] === undefined ? SeverityLevel.Information : map[og];
     },
     npm(og: string) {
-        const map: { [key: string ]: number } = {
+        const map: { [key: string]: number } = {
             error: SeverityLevel.Error,
             warn: SeverityLevel.Warning,
             info: SeverityLevel.Information,
             verbose: SeverityLevel.Verbose,
             debug: SeverityLevel.Verbose,
-            silly: SeverityLevel.Verbose
+            silly: SeverityLevel.Verbose,
         };
 
         return map[og] === undefined ? SeverityLevel.Information : map[og];
     },
     unknown(og: string) {
         return SeverityLevel.Information;
-    }
+    },
 };
 
 const subscriber = (event: IStandardEvent<winston.IWinstonData>) => {
-    const message = event.data.message as Error | string;
+    const message = event.data.message;
     clients.forEach((client) => {
         if (message instanceof Error) {
             client.trackException({
                 exception: message,
-                properties: event.data.meta
+                properties: event.data.meta,
             });
         } else {
             const AIlevel = winstonToAILevelMap[event.data.levelKind](event.data.level);
             client.trackTrace({
                 message: message,
                 severity: AIlevel,
-                properties: event.data.meta
+                properties: event.data.meta,
             });
         }
     });
@@ -64,7 +64,7 @@ export function enable(enabled: boolean, client: TelemetryClient) {
     if (enabled) {
         if (clients.length === 0) {
             channel.subscribe<winston.IWinstonData>("winston", subscriber);
-        };
+        }
         clients.push(client);
     } else {
         clients = clients.filter((c) => c != client);

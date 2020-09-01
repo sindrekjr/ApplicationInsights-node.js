@@ -1,4 +1,4 @@
-import { Telemetry }  from "./Telemetry";
+import { Telemetry } from "./Telemetry";
 import type * as http from "http";
 
 /**
@@ -21,8 +21,7 @@ export interface httpRequestOptions {
 /**
  * Object encapsulating information about the outgoing request
  */
-export interface NodeHttpDependencyTelemetry extends Telemetry
-{
+export interface NodeHttpDependencyTelemetry extends Telemetry {
     /**
      * Request options that will be used to instrument outgoing request
      */

@@ -6,44 +6,47 @@ import Context = require("../../Library/SdkContext");
 
 describe("Library/SdkContext", () => {
     describe("#constructor()", () => {
-        var stubs: Array<any> = [];
+        let stubs: Array<any> = [];
         beforeEach(() => {
             stubs = [
                 sinon.stub(os, "hostname").callsFake(() => "host"),
                 sinon.stub(os, "type").callsFake(() => "type"),
                 sinon.stub(os, "arch").callsFake(() => "arch"),
                 sinon.stub(os, "release").callsFake(() => "release"),
-                sinon.stub(os, "platform").callsFake(() => "platform" as any)
+                sinon.stub(os, "platform").callsFake(() => "platform" as any),
             ];
         });
 
         afterEach(() => {
-            stubs.forEach((s, i, arr) => s.restore());
+            stubs.forEach((s) => s.restore());
         });
 
         it("should initialize default context", () => {
-            var context = new Context();
-            var defaultkeys = [
+            const context = new Context();
+            const defaultkeys = [
                 context.keys.cloudRoleInstance,
                 context.keys.deviceOSVersion,
                 context.keys.internalSdkVersion,
-                context.keys.cloudRole
+                context.keys.cloudRole,
             ];
 
-            for (var i = 0; i < defaultkeys.length; i++) {
-                var key = defaultkeys[i];
-                assert.ok(!!context.tags[key], key = " is set");
+            for (let i = 0; i < defaultkeys.length; i++) {
+                let key = defaultkeys[i];
+                assert.ok(!!context.tags[key], (key = " is set"));
             }
         });
 
         it("should set internalSdkVersion to 'node:<version>'", () => {
-            var context = new Context();
+            const context = new Context();
             // todo: make this less fragile (will need updating on each minor version change)
-            assert.equal(context.tags[context.keys.internalSdkVersion].substring(0, 9), "node:2.0.");
+            assert.equal(
+                context.tags[context.keys.internalSdkVersion].substring(0, 9),
+                "node:2.0."
+            );
         });
 
         it("should correctly set device context", () => {
-            var context = new Context();
+            const context = new Context();
             assert.equal(context.tags[context.keys.cloudRoleInstance], "host");
             assert.equal(context.tags[context.keys.deviceOSVersion], "type release");
             assert.equal(context.tags[context.keys.cloudRole], Context.DefaultRoleName);

@@ -18,19 +18,21 @@ export interface StatusContract {
 }
 
 function readPackageVersion() {
-    let packageJsonPath = path.resolve(__dirname, "../../package.json");
+    const packageJsonPath = path.resolve(__dirname, "../../package.json");
     try {
-        let packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
+        const packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
         if (packageJson && typeof packageJson.version === "string") {
             return packageJson.version;
         }
-    } catch (e) { }
+    } catch (e) {}
     return "unknown";
 }
 
 export class StatusLogger {
     public static readonly DEFAULT_FILE_PATH: string = path.join(homedir, "status");
-    public static readonly DEFAULT_FILE_NAME: string = `status_${os.hostname()}_${process.pid}.json`;
+    public static readonly DEFAULT_FILE_NAME: string = `status_${os.hostname()}_${
+        process.pid
+    }.json`;
     public static readonly DEFAULT_STATUS: StatusContract = {
         AgentInitializedSuccessfully: false,
         SDKPresent: false,
@@ -38,8 +40,8 @@ export class StatusLogger {
         AppType: "node.js",
         SdkVersion: readPackageVersion(),
         MachineName: os.hostname(),
-        PID: String(process.pid)
-    }
+        PID: String(process.pid),
+    };
 
     constructor(public _writer: DataModel.AgentLogger = console) {}
 

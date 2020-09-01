@@ -2,7 +2,7 @@ import { DocumentQuickPulse } from "./DocumentQuickPulse";
 import { MetricQuickPulse } from "./MetricQuickPulse";
 
 export interface EnvelopeQuickPulse {
-    Documents: DocumentQuickPulse[];
+    Documents: DocumentQuickPulse[] | null;
 
     Instance: string;
 
@@ -12,7 +12,7 @@ export interface EnvelopeQuickPulse {
 
     MachineName: string;
 
-    Metrics: MetricQuickPulse[];
+    Metrics: MetricQuickPulse[] | null;
 
     StreamId: string;
 

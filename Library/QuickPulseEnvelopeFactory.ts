@@ -1,25 +1,31 @@
 import os = require("os");
-import Contracts = require("../Declarations/Contracts")
+import Contracts = require("../Declarations/Contracts");
 import Constants = require("../Declarations/Constants");
-import Util = require("./Util")
+import Util = require("./Util");
 import Config = require("./Config");
 import SdkContext = require("./SdkContext");
 import Logging = require("./Logging");
 
-var StreamId = Util.w3cTraceId(); // Create a guid
+const StreamId = Util.w3cTraceId(); // Create a guid
 
 class QuickPulseEnvelopeFactory {
     private static keys = new Contracts.ContextTagKeys();
 
-    public static createQuickPulseEnvelope(metrics: Contracts.MetricQuickPulse[], documents: Contracts.DocumentQuickPulse[], config: Config, context: SdkContext): Contracts.EnvelopeQuickPulse {
-        const machineName = (os && typeof os.hostname === "function"
-            && os.hostname()) || "Unknown"; // Note: os.hostname() was added in node v0.3.3
-        const instance = (context.tags
-            && context.keys
-            && context.keys.cloudRoleInstance
-            && context.tags[context.keys.cloudRoleInstance]) || machineName;
+    public static createQuickPulseEnvelope(
+        metrics: Contracts.MetricQuickPulse[],
+        documents: Contracts.DocumentQuickPulse[],
+        config: Config,
+        context: SdkContext
+    ): Contracts.EnvelopeQuickPulse {
+        const machineName = (os && typeof os.hostname === "function" && os.hostname()) || "Unknown"; // Note: os.hostname() was added in node v0.3.3
+        const instance =
+            (context.tags &&
+                context.keys &&
+                context.keys.cloudRoleInstance &&
+                context.tags[context.keys.cloudRoleInstance]) ||
+            machineName;
 
-        var envelope: Contracts.EnvelopeQuickPulse = {
+        const envelope: Contracts.EnvelopeQuickPulse = {
             Documents: documents.length > 0 ? documents : null,
             InstrumentationKey: config.instrumentationKey || "",
             Metrics: metrics.length > 0 ? metrics : null,
@@ -28,8 +34,8 @@ class QuickPulseEnvelopeFactory {
             Version: context.tags[context.keys.internalSdkVersion],
             StreamId: StreamId,
             MachineName: machineName,
-            Instance: instance
-        }
+            Instance: instance,
+        };
 
         return envelope;
     }
@@ -37,19 +43,18 @@ class QuickPulseEnvelopeFactory {
     public static createQuickPulseMetric(
         telemetry: Contracts.MetricTelemetry
     ): Contracts.MetricQuickPulse {
-        var data: Contracts.MetricQuickPulse;
-        data = {
+        const data: Contracts.MetricQuickPulse = {
             Name: telemetry.name, // TODO: map from MetricTelemetry name to QuickPulse name
             Value: telemetry.value,
-            Weight: telemetry.count || 1
+            Weight: telemetry.count || 1,
         };
         return data;
     }
 
-    public static telemetryEnvelopeToQuickPulseDocument(envelope: Contracts.Envelope): Contracts.DocumentQuickPulse {
+    public static telemetryEnvelopeToQuickPulseDocument(
+        envelope: Contracts.Envelope
+    ): Contracts.DocumentQuickPulse {
         switch (envelope.data.baseType) {
-            case Contracts.TelemetryTypeString.Event:
-                return QuickPulseEnvelopeFactory.createQuickPulseEventDocument(envelope);
             case Contracts.TelemetryTypeString.Exception:
                 return QuickPulseEnvelopeFactory.createQuickPulseExceptionDocument(envelope);
             case Contracts.TelemetryTypeString.Trace:
@@ -58,46 +63,56 @@ class QuickPulseEnvelopeFactory {
                 return QuickPulseEnvelopeFactory.createQuickPulseDependencyDocument(envelope);
             case Contracts.TelemetryTypeString.Request:
                 return QuickPulseEnvelopeFactory.createQuickPulseRequestDocument(envelope);
+            case Contracts.TelemetryTypeString.Event:
+            default:
+                return QuickPulseEnvelopeFactory.createQuickPulseEventDocument(envelope);
         }
-        return null;
     }
 
-    private static createQuickPulseEventDocument(envelope: Contracts.Envelope): Contracts.EventDocumentQuickPulse {
+    private static createQuickPulseEventDocument(
+        envelope: Contracts.Envelope
+    ): Contracts.EventDocumentQuickPulse {
         const document = QuickPulseEnvelopeFactory.createQuickPulseDocument(envelope);
         const name = ((envelope.data as any).baseData as Contracts.EventData).name;
         const eventDocument: Contracts.EventDocumentQuickPulse = {
             ...document,
-            Name: name
+            Name: name,
         };
 
         return eventDocument;
     }
 
-    private static createQuickPulseTraceDocument(envelope: Contracts.Envelope): Contracts.MessageDocumentQuickPulse {
+    private static createQuickPulseTraceDocument(
+        envelope: Contracts.Envelope
+    ): Contracts.MessageDocumentQuickPulse {
         const document = QuickPulseEnvelopeFactory.createQuickPulseDocument(envelope);
-        const severityLevel = ((envelope.data as any).baseData as Contracts.MessageData).severityLevel || 0;
-        var traceDocument: Contracts.MessageDocumentQuickPulse = {
+        const severityLevel =
+            ((envelope.data as any).baseData as Contracts.MessageData).severityLevel || 0;
+        const traceDocument: Contracts.MessageDocumentQuickPulse = {
             ...document,
             Message: ((envelope.data as any).baseData as Contracts.MessageData).message,
-            SeverityLevel: Contracts.SeverityLevel[severityLevel]
-        }
+            SeverityLevel: Contracts.SeverityLevel[severityLevel],
+        };
 
         return traceDocument;
     }
 
-    private static createQuickPulseExceptionDocument(envelope: Contracts.Envelope): Contracts.ExceptionDocumentQuickPulse {
+    private static createQuickPulseExceptionDocument(
+        envelope: Contracts.Envelope
+    ): Contracts.ExceptionDocumentQuickPulse {
         const document = QuickPulseEnvelopeFactory.createQuickPulseDocument(envelope);
-        const exceptionDetails = ((envelope.data as any).baseData as Contracts.ExceptionData).exceptions;
+        const exceptionDetails = ((envelope.data as any).baseData as Contracts.ExceptionData)
+            .exceptions;
 
-        let exception = '';
-        let exceptionMessage = '';
-        let exceptionType = '';
+        let exception = "";
+        let exceptionMessage = "";
+        let exceptionType = "";
 
         // Try to fill exception information from first error only
         if (exceptionDetails && exceptionDetails.length > 0) {
             // Try to grab the stack from parsedStack or stack
             if (exceptionDetails[0].parsedStack && exceptionDetails[0].parsedStack.length > 0) {
-                exceptionDetails[0].parsedStack.forEach(err => {
+                exceptionDetails[0].parsedStack.forEach((err) => {
                     exception += err.assembly + "\n";
                 });
             } else if (exceptionDetails[0].stack && exceptionDetails[0].stack.length > 0) {
@@ -108,16 +123,18 @@ class QuickPulseEnvelopeFactory {
             exceptionType = exceptionDetails[0].typeName;
         }
 
-        var exceptionDocument = {
+        const exceptionDocument = {
             ...document,
             Exception: exception,
             ExceptionMessage: exceptionMessage,
-            ExceptionType: exceptionType
+            ExceptionType: exceptionType,
         };
         return exceptionDocument;
     }
 
-    private static createQuickPulseRequestDocument(envelope: Contracts.Envelope): Contracts.RequestDocumentQuickPulse {
+    private static createQuickPulseRequestDocument(
+        envelope: Contracts.Envelope
+    ): Contracts.RequestDocumentQuickPulse {
         const document = QuickPulseEnvelopeFactory.createQuickPulseDocument(envelope);
         const baseData = (envelope.data as Contracts.Data<Contracts.RequestData>).baseData;
         const requestDocument: Contracts.RequestDocumentQuickPulse = {
@@ -126,13 +143,15 @@ class QuickPulseEnvelopeFactory {
             Success: baseData.success,
             Duration: baseData.duration,
             ResponseCode: baseData.responseCode,
-            OperationName: baseData.name // TODO: is this correct?
+            OperationName: baseData.name, // TODO: is this correct?
         };
 
         return requestDocument;
     }
 
-    private static createQuickPulseDependencyDocument(envelope: Contracts.Envelope): Contracts.DependencyDocumentQuickPulse {
+    private static createQuickPulseDependencyDocument(
+        envelope: Contracts.Envelope
+    ): Contracts.DependencyDocumentQuickPulse {
         const document = QuickPulseEnvelopeFactory.createQuickPulseDocument(envelope);
         const baseData = (envelope.data as Contracts.Data<Contracts.RemoteDependencyData>).baseData;
 
@@ -146,58 +165,69 @@ class QuickPulseEnvelopeFactory {
             CommandName: baseData.data,
             OperationName: document.OperationId,
             DependencyTypeName: baseData.type,
-        }
+        };
         return dependencyDocument;
     }
 
-    private static createQuickPulseDocument(envelope: Contracts.Envelope): Contracts.DocumentQuickPulse {
-        let documentType: Constants.QuickPulseDocumentType;
-        let __type: Constants.QuickPulseType;
-        let operationId, properties;
-
+    private static createQuickPulseDocument(
+        envelope: Contracts.Envelope
+    ): Contracts.DocumentQuickPulse {
+        let documentType: Constants.QuickPulseDocumentType | undefined = undefined;
+        let __type: Constants.QuickPulseType | undefined = undefined;
 
         if (envelope.data.baseType) {
-            __type = Constants.TelemetryTypeStringToQuickPulseType[envelope.data.baseType as Contracts.TelemetryTypeValues];
-            documentType = Constants.TelemetryTypeStringToQuickPulseDocumentType[envelope.data.baseType as Contracts.TelemetryTypeValues];
+            __type =
+                Constants.TelemetryTypeStringToQuickPulseType[
+                    envelope.data.baseType as Contracts.TelemetryTypeValues
+                ];
+            documentType =
+                Constants.TelemetryTypeStringToQuickPulseDocumentType[
+                    envelope.data.baseType as Contracts.TelemetryTypeValues
+                ];
         } else {
             // Remark: This should never be hit because createQuickPulseDocument is only called within
             // valid baseType values
-            Logging.warn("Document type invalid; not sending live metric document", envelope.data.baseType);
+            Logging.warn(
+                "Document type invalid; not sending live metric document",
+                envelope.data.baseType
+            );
         }
 
-        operationId = envelope.tags[QuickPulseEnvelopeFactory.keys.operationId];
-        properties = QuickPulseEnvelopeFactory.aggregateProperties(envelope);
+        const operationId = envelope.tags[QuickPulseEnvelopeFactory.keys.operationId];
+        const properties = QuickPulseEnvelopeFactory.aggregateProperties(envelope);
 
-        var document: Contracts.DocumentQuickPulse = {
-            DocumentType: documentType,
-            __type: __type,
+        const document: Contracts.DocumentQuickPulse = {
+            DocumentType: documentType ?? "Event",
+            __type: __type ?? "EventTelemetryDocument",
             OperationId: operationId,
             Version: "1.0",
-            Properties: properties
+            Properties: properties,
         };
 
         return document;
     }
 
-    private static aggregateProperties(envelope: Contracts.Envelope): Contracts.IDocumentProperty[] {
+    private static aggregateProperties(
+        envelope: Contracts.Envelope
+    ): Contracts.IDocumentProperty[] {
         const properties: Contracts.IDocumentProperty[] = [];
 
         // Collect measurements
-        const meas = ((envelope.data as any).baseData).measurements || {};
-        for (let key in meas) {
+        const meas = (envelope.data as any).baseData.measurements || {};
+        for (const key in meas) {
             if (meas.hasOwnProperty(key)) {
                 const value = meas[key];
-                const property: Contracts.IDocumentProperty = {key, value};
+                const property: Contracts.IDocumentProperty = { key, value };
                 properties.push(property);
             }
         }
 
         // Collect properties
-        const props = ((envelope.data as any).baseData).properties || {};
-        for (let key in props) {
+        const props = (envelope.data as any).baseData.properties || {};
+        for (const key in props) {
             if (props.hasOwnProperty(key)) {
                 const value = props[key];
-                const property: Contracts.IDocumentProperty = {key, value};
+                const property: Contracts.IDocumentProperty = { key, value };
                 properties.push(property);
             }
         }

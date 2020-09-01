@@ -21,7 +21,7 @@ describe("diagnostic-channel/bunyan", () => {
         enable(true, AppInsights.defaultClient);
         const logEvent: bunyan.IBunyanData = {
             result: "test log",
-            level: 50 // Error should still log as MessageData
+            level: 50, // Error should still log as MessageData
         };
         const dummyError = new Error("test error");
         const errorEvent: bunyan.IBunyanData = {

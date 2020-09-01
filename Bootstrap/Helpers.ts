@@ -6,7 +6,9 @@ export function sdkAlreadyExists(_logger: DiagnosticLogger): boolean {
         let appInstance: string;
         try {
             // Node 8.9+
-            appInstance = (require.resolve as any)("applicationinsights", { paths: [process.cwd()] });
+            appInstance = (require.resolve as any)("applicationinsights", {
+                paths: [process.cwd()],
+            });
         } catch (e) {
             // Node <8.9
             appInstance = require.resolve(process.cwd() + "/node_modules/applicationinsights");
@@ -15,7 +17,7 @@ export function sdkAlreadyExists(_logger: DiagnosticLogger): boolean {
         if (appInstance !== attachInstance) {
             _logger.logMessage(
                 "applicationinsights module is already installed in this application; not re-attaching. Installed SDK location: " +
-                appInstance
+                    appInstance
             );
             return true;
         }

@@ -23,14 +23,14 @@ describe("diagnostic-channel/winston", () => {
             message: "test log",
             meta: {},
             level: "foo",
-            levelKind: "npm"
+            levelKind: "npm",
         };
         const dummyError = new Error("test error");
         const errorEvent: winston.IWinstonData = {
             message: dummyError as any,
             meta: {},
             level: "foo",
-            levelKind: "npm"
+            levelKind: "npm",
         };
 
         channel.publish("winston", logEvent);

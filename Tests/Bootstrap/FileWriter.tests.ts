@@ -21,13 +21,13 @@ describe("FileWriter", () => {
             } else {
                 assert.ok(true, "skipped");
             }
-        })
+        });
     });
 
     describe("#log()", () => {
         it("should not log if the FileWriter is not ready", () => {
             const writer = new FileWriter(filedir, "test.txt");
-            const stub = sinon.stub((writer as any), "_writeFile");
+            const stub = sinon.stub(writer as any, "_writeFile");
             writer["_ready"] = false;
 
             assert.ok(stub.notCalled);
@@ -59,7 +59,7 @@ describe("FileWriter", () => {
                 const content = fs.readFileSync(path.join(os.tmpdir(), "tempfile.txt"), "utf8");
                 assert.deepEqual(content, "temp:foo");
                 done();
-            }
+            };
             writer.log("temp:foo");
         });
 
@@ -70,7 +70,7 @@ describe("FileWriter", () => {
                 const content = fs.readFileSync(path.join(filedir, "newfile.txt"), "utf8");
                 assert.deepEqual(content, "newfile #1");
                 done();
-            }
+            };
             writer["_writeFile"]("newfile #1");
         });
 
@@ -85,9 +85,9 @@ describe("FileWriter", () => {
                     const content = fs.readFileSync(path.join(filedir, "test.txt"), "utf8");
                     assert.deepEqual(content, "write #2");
                     done();
-                }
+                };
                 writer["_writeFile"]("write #2");
-            }
+            };
             writer["_writeFile"]("write #1");
         });
     });
@@ -109,7 +109,7 @@ describe("FileWriter", () => {
                     assert.deepEqual(content, "line #0\nline #1\nline #2\nline #3\n");
                     done();
                 }
-            }
+            };
             writer.log(`line #${counter}`);
         });
     });
@@ -120,7 +120,7 @@ describe("FileWriter", () => {
             writer.callback = (err) => {
                 assert.equal(err, null);
                 done();
-            }
+            };
             writer.log("example");
         });
     });
@@ -148,7 +148,7 @@ describe("FileWriter", () => {
                         done();
                     });
                 });
-            }
+            };
             writer.log("message");
         });
     });
@@ -158,7 +158,9 @@ describe("FileWriter", () => {
             const writer = new FileWriter(filedir, "renametest.txt");
             writer.callback = (err) => {
                 assert.deepEqual(err, null);
-                const birthdate = new Date(fs.statSync(path.join(filedir, "renametest.txt")).birthtime);
+                const birthdate = new Date(
+                    fs.statSync(path.join(filedir, "renametest.txt")).birthtime
+                );
 
                 // Rename the file
                 FileHelpers.renameCurrentFile(filedir, "renametest.txt", (err, renamedfullpath) => {
@@ -171,7 +173,16 @@ describe("FileWriter", () => {
                     }
 
                     // Assert renamed file has identical contents and was renamed properly
-                    assert.deepEqual(renamedfullpath, path.join(filedir, `renametest-${birthdate.toISOString().replace(/[T:\.]/g, "_").replace("Z", "")}.txt.old`));
+                    assert.deepEqual(
+                        renamedfullpath,
+                        path.join(
+                            filedir,
+                            `renametest-${birthdate
+                                .toISOString()
+                                .replace(/[T:\.]/g, "_")
+                                .replace("Z", "")}.txt.old`
+                        )
+                    );
                     const content = fs.readFileSync(renamedfullpath, "utf8");
                     assert.deepEqual(content, "foo");
 
@@ -179,7 +190,7 @@ describe("FileWriter", () => {
                     fs.unlinkSync(renamedfullpath);
                     done();
                 });
-            }
+            };
             writer.log("foo"); // create the file
         });
     });

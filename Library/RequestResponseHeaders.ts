@@ -1,5 +1,4 @@
 export = {
-
     /**
      * Request-Context header
      */
@@ -37,5 +36,5 @@ export = {
     /**
      * W3C distributed tracing protocol state header
      */
-    traceStateHeader: "tracestate"
-}
+    traceStateHeader: "tracestate",
+};

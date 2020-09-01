@@ -1,8 +1,8 @@
-import TelemetryClient= require("../Library/TelemetryClient");
+import TelemetryClient = require("../Library/TelemetryClient");
 import Constants = require("../Declarations/Constants");
 import Config = require("../Library/Config");
 import Context = require("../Library/SdkContext");
-import Logging= require("../Library/Logging");
+import Logging = require("../Library/Logging");
 
 /**
  * Interface which defines which specific extended metrics should be disabled
@@ -41,7 +41,7 @@ export class AutoCollectNativePerformance {
      *  Reports if NativePerformance is able to run in this environment
      */
     public static isNodeVersionCompatible() {
-        var nodeVer = process.versions.node.split(".");
+        const nodeVer = process.versions.node.split(".");
         return parseInt(nodeVer[0]) >= 6;
     }
 
@@ -52,14 +52,23 @@ export class AutoCollectNativePerformance {
      * @param {number} [collectionInterval=60000]
      * @memberof AutoCollectNativePerformance
      */
-    public enable(isEnabled: boolean, disabledMetrics: IDisabledExtendedMetrics = {}, collectionInterval = 60000): void {
+    public enable(
+        isEnabled: boolean,
+        disabledMetrics: IDisabledExtendedMetrics = {},
+        collectionInterval = 60000
+    ): void {
         if (!AutoCollectNativePerformance.isNodeVersionCompatible()) {
             return;
         }
 
-        if (AutoCollectNativePerformance._metricsAvailable == undefined && isEnabled && !this._isInitialized) {
+        if (
+            AutoCollectNativePerformance._metricsAvailable == undefined &&
+            isEnabled &&
+            !this._isInitialized
+        ) {
             // Try to require in the native-metrics library. If it's found initialize it, else do nothing and never try again.
             try {
+                // eslint-disable-next-line node/no-missing-require
                 const NativeMetricsEmitters = require("applicationinsights-native-metrics");
                 AutoCollectNativePerformance._emitter = new NativeMetricsEmitters();
                 AutoCollectNativePerformance._metricsAvailable = true;
@@ -72,7 +81,7 @@ export class AutoCollectNativePerformance {
         }
 
         this._isEnabled = isEnabled;
-        this._disabledMetrics = disabledMetrics
+        this._disabledMetrics = disabledMetrics;
         if (this._isEnabled && !this._isInitialized) {
             this._isInitialized = true;
         }
@@ -111,9 +120,11 @@ export class AutoCollectNativePerformance {
      * @returns {(boolean | IDisabledExtendedMetrics)}
      * @memberof AutoCollectNativePerformance
      */
-    public static parseEnabled(collectExtendedMetrics: boolean | IDisabledExtendedMetrics): { isEnabled: boolean, disabledMetrics: IDisabledExtendedMetrics } {
+    public static parseEnabled(
+        collectExtendedMetrics: boolean | IDisabledExtendedMetrics
+    ): { isEnabled: boolean; disabledMetrics: IDisabledExtendedMetrics } {
         const disableAll = process.env[Config.ENV_nativeMetricsDisableAll];
-        const individualOptOuts = process.env[Config.ENV_nativeMetricsDisablers]
+        const individualOptOuts = process.env[Config.ENV_nativeMetricsDisablers];
 
         // case 1: disable all env var set, RETURN with isEnabled=false
         if (disableAll) {
@@ -132,19 +143,23 @@ export class AutoCollectNativePerformance {
 
             // case 2a: collectExtendedMetrics is an object, overwrite existing ones if they exist
             if (typeof collectExtendedMetrics === "object") {
-                return {isEnabled: true, disabledMetrics: {...collectExtendedMetrics, ...disabledMetrics}};
+                return {
+                    isEnabled: true,
+                    disabledMetrics: { ...collectExtendedMetrics, ...disabledMetrics },
+                };
             }
 
             // case 2b: collectExtendedMetrics is a boolean, set disabledMetrics as is
-            return {isEnabled: collectExtendedMetrics, disabledMetrics};
+            return { isEnabled: collectExtendedMetrics, disabledMetrics };
         }
 
         // case 4: no env vars set, input arg is a boolean, RETURN with isEnabled=collectExtendedMetrics, disabledMetrics={}
         if (typeof collectExtendedMetrics === "boolean") {
             return { isEnabled: collectExtendedMetrics, disabledMetrics: {} };
-        } else { // use else so we don't need to force typing on collectExtendedMetrics
+        } else {
+            // use else so we don't need to force typing on collectExtendedMetrics
             // case 5: no env vars set, input arg is object, RETURN with isEnabled=true, disabledMetrics=collectExtendedMetrics
-            return { isEnabled: true, disabledMetrics: collectExtendedMetrics};
+            return { isEnabled: true, disabledMetrics: collectExtendedMetrics };
         }
     }
 
@@ -181,10 +196,13 @@ export class AutoCollectNativePerformance {
 
         const gcData = AutoCollectNativePerformance._emitter.getGCData();
 
-        for (let gc in gcData) {
+        for (const gc in gcData) {
             const metrics = gcData[gc].metrics;
             const name = `${gc} Garbage Collection Duration`;
-            const stdDev = Math.sqrt(metrics.sumSquares / metrics.count - Math.pow(metrics.total / metrics.count, 2)) || 0;
+            const stdDev =
+                Math.sqrt(
+                    metrics.sumSquares / metrics.count - Math.pow(metrics.total / metrics.count, 2)
+                ) || 0;
             this._client.trackMetric({
                 name: name,
                 value: metrics.total,
@@ -193,8 +211,9 @@ export class AutoCollectNativePerformance {
                 min: metrics.min,
                 stdDev: stdDev,
                 tagOverrides: {
-                    [this._client.context.keys.internalSdkVersion]: "node-nativeperf:" + Context.sdkVersion
-                }
+                    [this._client.context.keys.internalSdkVersion]:
+                        "node-nativeperf:" + Context.sdkVersion,
+                },
             });
         }
     }
@@ -219,7 +238,10 @@ export class AutoCollectNativePerformance {
         }
 
         const name = `Event Loop CPU Time`;
-        const stdDev = Math.sqrt(metrics.sumSquares / metrics.count - Math.pow(metrics.total / metrics.count, 2)) || 0;
+        const stdDev =
+            Math.sqrt(
+                metrics.sumSquares / metrics.count - Math.pow(metrics.total / metrics.count, 2)
+            ) || 0;
         this._client.trackMetric({
             name: name,
             value: metrics.total,
@@ -228,8 +250,9 @@ export class AutoCollectNativePerformance {
             max: metrics.max,
             stdDev: stdDev,
             tagOverrides: {
-                [this._client.context.keys.internalSdkVersion]: "node-nativeperf:" + Context.sdkVersion
-            }
+                [this._client.context.keys.internalSdkVersion]:
+                    "node-nativeperf:" + Context.sdkVersion,
+            },
         });
     }
 
@@ -252,24 +275,27 @@ export class AutoCollectNativePerformance {
             value: heapUsed,
             count: 1,
             tagOverrides: {
-                [this._client.context.keys.internalSdkVersion]: "node-nativeperf:" + Context.sdkVersion
-            }
+                [this._client.context.keys.internalSdkVersion]:
+                    "node-nativeperf:" + Context.sdkVersion,
+            },
         });
         this._client.trackMetric({
             name: `Memory Total (Heap)`,
             value: heapTotal,
             count: 1,
             tagOverrides: {
-                [this._client.context.keys.internalSdkVersion]: "node-nativeperf:" + Context.sdkVersion
-            }
+                [this._client.context.keys.internalSdkVersion]:
+                    "node-nativeperf:" + Context.sdkVersion,
+            },
         });
         this._client.trackMetric({
             name: `Memory Usage (Non-Heap)`,
             value: rss - heapTotal,
             count: 1,
             tagOverrides: {
-                [this._client.context.keys.internalSdkVersion]: "node-nativeperf:" + Context.sdkVersion
-            }
+                [this._client.context.keys.internalSdkVersion]:
+                    "node-nativeperf:" + Context.sdkVersion,
+            },
         });
     }
 }

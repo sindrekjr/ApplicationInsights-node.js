@@ -1,6 +1,6 @@
 import assert = require("assert");
 import sinon = require("sinon");
-import Console = require("../../AutoCollection/Console")
+import Console = require("../../AutoCollection/Console");
 
 import AppInsights = require("../../applicationinsights");
 
@@ -14,22 +14,31 @@ describe("AutoCollection/Console", () => {
     });
     describe("#init and #dispose()", () => {
         it("init should enable and dispose should stop console autocollection", () => {
-
-            var appInsights = AppInsights.setup("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333").setAutoCollectConsole(true);
-            var enableConsoleRequestsSpy = sinon.spy(Console.INSTANCE, "enable");
+            const appInsights = AppInsights.setup(
+                "1aa11111-bbbb-1ccc-8ddd-eeeeffff3333"
+            ).setAutoCollectConsole(true);
+            const enableConsoleRequestsSpy = sinon.spy(Console.INSTANCE, "enable");
             appInsights.start();
 
-            assert.equal(enableConsoleRequestsSpy.callCount, 1, "enable should be called once as part of console autocollection initialization");
+            assert.equal(
+                enableConsoleRequestsSpy.callCount,
+                1,
+                "enable should be called once as part of console autocollection initialization"
+            );
             assert.equal(enableConsoleRequestsSpy.getCall(0).args[0], true);
             AppInsights.dispose();
-            assert.equal(enableConsoleRequestsSpy.callCount, 2, "enable(false) should be called once as part of console autocollection shutdown");
+            assert.equal(
+                enableConsoleRequestsSpy.callCount,
+                2,
+                "enable(false) should be called once as part of console autocollection shutdown"
+            );
             assert.equal(enableConsoleRequestsSpy.getCall(1).args[0], false);
         });
     });
 
     describe("#log and #error()", () => {
         it("should call trackException for errors and trackTrace for logs", () => {
-            var appInsights = AppInsights.setup("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333");
+            const appInsights = AppInsights.setup("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333");
             appInsights.start();
 
             const trackExceptionStub = sinon.stub(AppInsights.defaultClient, "trackException");
@@ -39,7 +48,7 @@ describe("AutoCollection/Console", () => {
             enable(true, AppInsights.defaultClient);
             const logEvent: console.IConsoleData = {
                 message: "test log",
-                stderr: true // should log as MessageData regardless of this setting
+                stderr: true, // should log as MessageData regardless of this setting
             };
             const dummyError = new Error("test error");
             const errorEvent: console.IConsoleData = {

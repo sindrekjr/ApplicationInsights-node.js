@@ -10,7 +10,7 @@ class SenderMock extends Sender {
 }
 
 describe("Library/Sender", () => {
-    var sender:SenderMock;
+    let sender: SenderMock;
 
     beforeEach(() => {
         sender = new SenderMock(new Config("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333"));

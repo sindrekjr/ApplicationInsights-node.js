@@ -1,10 +1,13 @@
 // Place your settings in this file to overwrite default and user settings.
 {
-     "files.exclude": {
+    "files.exclude": {
         "**/*.js": { "when": "$(basename).ts"},
         "**/*.js.map": true,
         "**/*.d.ts": true,
         "out/": true
-     },
-    "typescript.tsdk": "./node_modules/typescript/lib"
+    },
+    "typescript.tsdk": "./node_modules/typescript/lib",
+    "editor.codeActionsOnSave": {
+        "source.fixAll.eslint": true
+    }
 }

@@ -1,4 +1,12 @@
-export type TelemetryTypeKeys = "Event" | "Exception" | "Trace" | "Metric" | "Request" | "Dependency" | "Availability" | "PageView";
+export type TelemetryTypeKeys =
+    | "Event"
+    | "Exception"
+    | "Trace"
+    | "Metric"
+    | "Request"
+    | "Dependency"
+    | "Availability"
+    | "PageView";
 export type TelemetryTypeValues =
     | "EventData"
     | "ExceptionData"
@@ -14,7 +22,7 @@ export type TelemetryTypeValues =
  * @param type Type to convert to BaseData string
  */
 export function telemetryTypeToBaseType(type: TelemetryType): TelemetryTypeValues {
-    switch(type) {
+    switch (type) {
         case TelemetryType.Event:
             return "EventData";
         case TelemetryType.Exception:
@@ -32,7 +40,6 @@ export function telemetryTypeToBaseType(type: TelemetryType): TelemetryTypeValue
         case TelemetryType.PageView:
             return "PageViewData";
     }
-    return undefined;
 }
 
 /**
@@ -40,7 +47,7 @@ export function telemetryTypeToBaseType(type: TelemetryType): TelemetryTypeValue
  * @param baseType BaseData string to convert to TelemetryType
  */
 export function baseTypeToTelemetryType(baseType: TelemetryTypeValues): TelemetryType {
-    switch(baseType) {
+    switch (baseType) {
         case "EventData":
             return TelemetryType.Event;
         case "ExceptionData":
@@ -58,10 +65,9 @@ export function baseTypeToTelemetryType(baseType: TelemetryTypeValues): Telemetr
         case "PageViewData":
             return TelemetryType.PageView;
     }
-    return undefined;
 }
 
-export const TelemetryTypeString: {[key: string]: TelemetryTypeValues} = {
+export const TelemetryTypeString: { [key in TelemetryTypeKeys]: TelemetryTypeValues } = {
     Event: "EventData",
     Exception: "ExceptionData",
     Trace: "MessageData",
@@ -70,7 +76,7 @@ export const TelemetryTypeString: {[key: string]: TelemetryTypeValues} = {
     Dependency: "RemoteDependencyData",
     Availability: "AvailabilityData",
     PageView: "PageViewData",
-}
+};
 
 /**
  * Telemetry types supported by this SDK
@@ -83,7 +89,7 @@ export enum TelemetryType {
     Request,
     Dependency,
     Availability,
-    PageView
+    PageView,
 }
 
 export interface Identified {

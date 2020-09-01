@@ -1,11 +1,10 @@
-import { Telemetry }  from "./Telemetry";
+import { Telemetry } from "./Telemetry";
 import type * as http from "http";
 
 /**
  * Object encapsulating information about the incoming HTTP request
  */
-export interface NodeHttpRequestTelemetry extends Telemetry
-{
+export interface NodeHttpRequestTelemetry extends Telemetry {
     /**
      * HTTP request object
      */
@@ -24,5 +23,5 @@ export interface NodeHttpRequestTelemetry extends Telemetry
     /**
      * Error that occurred while processing the request. Used only for synchronous tracks.
      */
-    error?: any
+    error?: any;
 }

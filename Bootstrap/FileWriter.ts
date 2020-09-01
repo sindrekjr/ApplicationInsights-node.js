@@ -17,7 +17,7 @@ export interface FileWriterOptions {
 export const homedir = FileHelpers.homedir;
 
 export class FileWriter implements DataModel.AgentLogger {
-    public callback = (_err: Error) => { }; // no-op
+    public callback = (_err: Error) => {}; // no-op
     private _ready = false;
     private _options: FileWriterOptions;
     private static _fullpathsToDelete: string[] = [];
@@ -25,10 +25,10 @@ export class FileWriter implements DataModel.AgentLogger {
     private static DEFAULT_OPTIONS: FileWriterOptions = {
         append: false,
         deleteOnExit: true,
-        sizeLimit: 10*1024,
+        sizeLimit: 10 * 1024,
         renamePolicy: "stop",
-        chmod: 0o644 // rw/r/r
-    }
+        chmod: 0o644, // rw/r/r
+    };
 
     public static isNodeVersionCompatible() {
         const majVer = process.versions.node.split(".")[0];
@@ -36,9 +36,14 @@ export class FileWriter implements DataModel.AgentLogger {
     }
 
     // leave at "keep at single file only", "write up to certain size limit", "clear old file on process startup"
-    constructor(private _filepath: string, private _filename: string, options?: Partial<FileWriterOptions>) {
+    constructor(
+        private _filepath: string,
+        private _filename: string,
+        options?: Partial<FileWriterOptions>
+    ) {
         this._options = { ...FileWriter.DEFAULT_OPTIONS, ...options };
-        this._ready = FileWriter.isNodeVersionCompatible() && FileHelpers.makeStatusDirs(this._filepath);
+        this._ready =
+            FileWriter.isNodeVersionCompatible() && FileHelpers.makeStatusDirs(this._filepath);
         if (this._options.deleteOnExit) {
             FileWriter._addCloseHandler();
             FileWriter._fullpathsToDelete.push(path.join(this._filepath, this._filename));
@@ -47,9 +52,8 @@ export class FileWriter implements DataModel.AgentLogger {
 
     public log(message: any) {
         if (this._ready) {
-            let data = typeof message === "object"
-                ? JSON.stringify(message, null, 2)
-                : message.toString();
+            const data =
+                typeof message === "object" ? JSON.stringify(message, null, 2) : message.toString();
 
             // Check if existing file needs to be renamed
             this._shouldRenameFile((err, shouldRename) => {
@@ -57,13 +61,17 @@ export class FileWriter implements DataModel.AgentLogger {
 
                 if (shouldRename) {
                     if (this._options.renamePolicy === "rolling") {
-                        FileHelpers.renameCurrentFile(this._filepath, this._filename, (renameErr, renamedFullpath) => {
-                            if (renameErr) return;
-                            FileWriter._fullpathsToDelete.push(renamedFullpath);
-                            this._options.append
-                                ? this._appendFile(data + "\n")
-                                : this._writeFile(data);
-                        });
+                        FileHelpers.renameCurrentFile(
+                            this._filepath,
+                            this._filename,
+                            (renameErr, renamedFullpath) => {
+                                if (renameErr) return;
+                                FileWriter._fullpathsToDelete.push(renamedFullpath);
+                                this._options.append
+                                    ? this._appendFile(data + "\n")
+                                    : this._writeFile(data);
+                            }
+                        );
                     } else if (this._options.renamePolicy === "overwrite") {
                         // Clear the current file
                         this._writeFile(data);
@@ -72,12 +80,9 @@ export class FileWriter implements DataModel.AgentLogger {
                         this._ready = false;
                     }
                 } else {
-                    this._options.append
-                    ? this._appendFile(data + "\n")
-                    : this._writeFile(data);
+                    this._options.append ? this._appendFile(data + "\n") : this._writeFile(data);
                 }
             });
-
         }
     }
 
@@ -103,14 +108,18 @@ export class FileWriter implements DataModel.AgentLogger {
                 FileWriter._fullpathsToDelete.forEach((filename) => {
                     try {
                         fs.unlinkSync(filename);
-                    } catch (err) { /** ignore errors */ }
+                    } catch (err) {
+                        /** ignore errors */
+                    }
                 });
             });
             FileWriter._listenerAttached = true;
         }
     }
 
-    private _shouldRenameFile(callback?: (err: Error | null, shouldRename?: boolean) => void): void {
+    private _shouldRenameFile(
+        callback?: (err: Error | null, shouldRename?: boolean) => void
+    ): void {
         const fullpath = path.join(this._filepath, this._filename);
         fs.stat(fullpath, (err, stats) => {
             if (err) {
@@ -127,11 +136,10 @@ export class FileWriter implements DataModel.AgentLogger {
             } else {
                 const createDate = new Date(stats.birthtime);
                 const currentDate = new Date();
-                const result = (
+                const result =
                     createDate.getUTCDate() !== currentDate.getUTCDate() ||
                     createDate.getUTCMonth() !== currentDate.getUTCMonth() ||
-                    createDate.getUTCFullYear() !== currentDate.getUTCFullYear()
-                );
+                    createDate.getUTCFullYear() !== currentDate.getUTCFullYear();
                 callback(null, result);
             }
         });

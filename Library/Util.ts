@@ -7,28 +7,29 @@ import Logging = require("./Logging");
 import Config = require("./Config");
 import TelemetryClient = require("../Library/TelemetryClient");
 import RequestResponseHeaders = require("./RequestResponseHeaders");
-import { HttpRequest } from "../Library/Functions";
-
 
 class Util {
     public static MAX_PROPERTY_LENGTH = 8192;
     public static tlsRestrictedAgent: https.Agent = new https.Agent(<any>{
-        secureOptions: constants.SSL_OP_NO_SSLv2 | constants.SSL_OP_NO_SSLv3 |
-            constants.SSL_OP_NO_TLSv1 | constants.SSL_OP_NO_TLSv1_1
+        secureOptions:
+            constants.SSL_OP_NO_SSLv2 |
+            constants.SSL_OP_NO_SSLv3 |
+            constants.SSL_OP_NO_TLSv1 |
+            constants.SSL_OP_NO_TLSv1_1,
     });
 
     /**
      * helper method to access userId and sessionId cookie
      */
     public static getCookie(name: string, cookie: string) {
-        var value = "";
+        let value = "";
         if (name && name.length && typeof cookie === "string") {
-            var cookieName = name + "=";
-            var cookies = cookie.split(";");
-            for (var i = 0; i < cookies.length; i++) {
-                var cookie = cookies[i];
+            const cookieName = name + "=";
+            const cookies = cookie.split(";");
+            for (let i = 0; i < cookies.length; i++) {
+                let cookie = cookies[i];
                 cookie = Util.trim(cookie);
-                if (cookie && cookie.indexOf(cookieName) === 0) {
+                if (cookie && cookie.startsWith(cookieName)) {
                     value = cookie.substring(cookieName.length, cookies[i].length);
                     break;
                 }
@@ -41,8 +42,8 @@ class Util {
     /**
      * helper method to trim strings (IE8 does not implement String.prototype.trim)
      */
-    public static trim(str:string):string {
-        if(typeof str === "string") {
+    public static trim(str: string): string {
+        if (typeof str === "string") {
             return str.replace(/^\s+|\s+$/g, "");
         } else {
             return "";
@@ -54,13 +55,12 @@ class Util {
      * MSB first.
      */
     public static int32ArrayToBase64(array: number[]) {
-        let toChar = (v: number, i: number) =>
-            String.fromCharCode((v >> i) & 0xFF);
-        let int32AsString = (v: number) =>
+        const toChar = (v: number, i: number) => String.fromCharCode((v >> i) & 0xff);
+        const int32AsString = (v: number) =>
             toChar(v, 24) + toChar(v, 16) + toChar(v, 8) + toChar(v, 0);
-        let x = array.map(int32AsString).join("");
-        const b = Buffer.from ? Buffer.from(x, "binary") : new Buffer(x, "binary");
-        let s = b.toString("base64");
+        const x = array.map(int32AsString).join("");
+        const b = Buffer.from(x, "binary");
+        const s = b.toString("base64");
         return s.substr(0, s.indexOf("="));
     }
 
@@ -83,26 +83,52 @@ class Util {
      * https://github.com/w3c/distributed-tracing/blob/master/trace_context/HTTP_HEADER_FORMAT.md#trace-id
      */
     public static w3cTraceId() {
-        var hexValues = ["0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "a", "b", "c", "d", "e", "f"];
+        const hexValues = [
+            "0",
+            "1",
+            "2",
+            "3",
+            "4",
+            "5",
+            "6",
+            "7",
+            "8",
+            "9",
+            "a",
+            "b",
+            "c",
+            "d",
+            "e",
+            "f",
+        ];
 
         // rfc4122 version 4 UUID without dashes and with lowercase letters
-        var oct = "", tmp;
-        for (var a = 0; a < 4; a++) {
+        let oct = "",
+            tmp;
+        for (let a = 0; a < 4; a++) {
             tmp = Util.random32();
             oct +=
-                hexValues[tmp & 0xF] +
-                hexValues[tmp >> 4 & 0xF] +
-                hexValues[tmp >> 8 & 0xF] +
-                hexValues[tmp >> 12 & 0xF] +
-                hexValues[tmp >> 16 & 0xF] +
-                hexValues[tmp >> 20 & 0xF] +
-                hexValues[tmp >> 24 & 0xF] +
-                hexValues[tmp >> 28 & 0xF];
+                hexValues[tmp & 0xf] +
+                hexValues[(tmp >> 4) & 0xf] +
+                hexValues[(tmp >> 8) & 0xf] +
+                hexValues[(tmp >> 12) & 0xf] +
+                hexValues[(tmp >> 16) & 0xf] +
+                hexValues[(tmp >> 20) & 0xf] +
+                hexValues[(tmp >> 24) & 0xf] +
+                hexValues[(tmp >> 28) & 0xf];
         }
 
         // "Set the two most significant bits (bits 6 and 7) of the clock_seq_hi_and_reserved to zero and one, respectively"
-        var clockSequenceHi = hexValues[8 + (Math.random() * 4) | 0];
-        return oct.substr(0, 8) + oct.substr(9, 4) + "4" + oct.substr(13, 3) + clockSequenceHi + oct.substr(16, 3) + oct.substr(19, 12);
+        const clockSequenceHi = hexValues[(8 + Math.random() * 4) | 0];
+        return (
+            oct.substr(0, 8) +
+            oct.substr(9, 4) +
+            "4" +
+            oct.substr(13, 3) +
+            clockSequenceHi +
+            oct.substr(16, 3) +
+            oct.substr(19, 12)
+        );
     }
 
     public static isValidW3CId(id: string): boolean {
@@ -112,14 +138,14 @@ class Util {
     /**
      * Check if an object is of type Array
      */
-    public static isArray(obj:any):boolean {
+    public static isArray(obj: any): boolean {
         return Object.prototype.toString.call(obj) === "[object Array]";
     }
 
     /**
      * Check if an object is of type Error
      */
-    public static isError(obj:any):boolean {
+    public static isError(obj: any): boolean {
         return obj instanceof Error;
     }
 
@@ -131,27 +157,27 @@ class Util {
     /**
      * Check if an object is of type Date
      */
-    public static isDate(obj:any):boolean {
+    public static isDate(obj: any): boolean {
         return Object.prototype.toString.call(obj) === "[object Date]";
     }
 
     /**
      * Convert ms to c# time span format
      */
-    public static msToTimeSpan(totalms:number):string {
+    public static msToTimeSpan(totalms: number): string {
         if (isNaN(totalms) || totalms < 0) {
             totalms = 0;
         }
 
-        var sec = ((totalms / 1000) % 60).toFixed(7).replace(/0{0,4}$/, "");
-        var min = "" + Math.floor(totalms / (1000 * 60)) % 60;
-        var hour = "" + Math.floor(totalms / (1000 * 60 * 60)) % 24;
-        var days = Math.floor(totalms / (1000 * 60 * 60 * 24));
+        let sec = ((totalms / 1000) % 60).toFixed(7).replace(/0{0,4}$/, "");
+        let min = "" + (Math.floor(totalms / (1000 * 60)) % 60);
+        let hour = "" + (Math.floor(totalms / (1000 * 60 * 60)) % 24);
+        const days = Math.floor(totalms / (1000 * 60 * 60 * 24));
 
         sec = sec.indexOf(".") < 2 ? "0" + sec : sec;
         min = min.length < 2 ? "0" + min : min;
         hour = hour.length < 2 ? "0" + hour : hour;
-        var daysText = days > 0 ? days + "." : "";
+        const daysText = days > 0 ? days + "." : "";
 
         return daysText + hour + ":" + min + ":" + sec;
     }
@@ -161,14 +187,14 @@ class Util {
      * Simplify a generic Node Error into a simpler map for customDimensions
      * Custom errors can still implement toJSON to override this functionality
      */
-    protected static extractError(err: Error): { message: string, code: string } {
+    protected static extractError(err: Error): { message: string; code: string } {
         // Error is often subclassed so may have code OR id properties:
         // https://nodejs.org/api/errors.html#errors_error_code
         const looseError = err as any;
         return {
             message: err.message,
             code: looseError.code || looseError.id || "",
-        }
+        };
     }
 
     /**
@@ -189,14 +215,14 @@ class Util {
     /**
      * Validate that an object is of type { [key: string]: string }
      */
-    public static validateStringMap(obj: any): { [key: string]: string } {
-        if(typeof obj !== "object") {
+    public static validateStringMap(obj: any): { [key: string]: string } | undefined {
+        if (typeof obj !== "object") {
             Logging.info("Invalid properties dropped from payload");
-            return;
+            return undefined;
         }
         const map: { [key: string]: string } = {};
-        for (let field in obj) {
-            let property: string = '';
+        for (const field in obj) {
+            let property: string = "";
             const origProperty: any = obj[field];
             const propType = typeof origProperty;
 
@@ -208,7 +234,9 @@ class Util {
                 Logging.info("key: " + field + " was function; will not serialize");
                 continue;
             } else {
-                const stringTarget = Util.isArray(origProperty) ? origProperty : Util.extractObject(origProperty);
+                const stringTarget = Util.isArray(origProperty)
+                    ? origProperty
+                    : Util.extractObject(origProperty);
                 try {
                     if (Util.isPrimitive(stringTarget)) {
                         property = stringTarget;
@@ -216,7 +244,8 @@ class Util {
                         property = JSON.stringify(stringTarget);
                     }
                 } catch (e) {
-                    property = origProperty.constructor.name.toString() + " (Error: " + e.message + ")";
+                    property =
+                        origProperty.constructor.name.toString() + " (Error: " + e.message + ")";
                     Logging.info("key: " + field + ", could not be serialized");
                 }
             }
@@ -226,19 +255,19 @@ class Util {
         return map;
     }
 
-
     /**
      * Checks if a request url is not on a excluded domain list
      * and if it is safe to add correlation headers
      */
     public static canIncludeCorrelationHeader(client: TelemetryClient, requestUrl: string) {
-        let excludedDomains = client && client.config && client.config.correlationHeaderExcludedDomains;
+        const excludedDomains =
+            client && client.config && client.config.correlationHeaderExcludedDomains;
         if (!excludedDomains || excludedDomains.length == 0 || !requestUrl) {
             return true;
         }
 
         for (let i = 0; i < excludedDomains.length; i++) {
-            let regex = new RegExp(excludedDomains[i].replace(/\./g,"\.").replace(/\*/g,".*"));
+            const regex = new RegExp(excludedDomains[i].replace(/\./g, ".").replace(/\*/g, ".*"));
             if (regex.test(url.parse(requestUrl).hostname)) {
                 return false;
             }
@@ -261,51 +290,51 @@ class Util {
         config: Config,
         requestUrl: string,
         requestOptions: http.RequestOptions | https.RequestOptions,
-        requestCallback: (res: http.IncomingMessage) => void): http.ClientRequest {
-
-        if (requestUrl && requestUrl.indexOf('//') === 0) {
-            requestUrl = 'https:' + requestUrl;
+        requestCallback: (res: http.IncomingMessage) => void
+    ): http.ClientRequest {
+        if (requestUrl && requestUrl.startsWith("//")) {
+            requestUrl = "https:" + requestUrl;
         }
 
-        var requestUrlParsed = url.parse(requestUrl);
-        var options = {...requestOptions,
+        const requestUrlParsed = url.parse(requestUrl);
+        let options = {
+            ...requestOptions,
             host: requestUrlParsed.hostname,
             port: requestUrlParsed.port,
             path: requestUrlParsed.pathname,
         };
 
-        var proxyUrl: string = undefined;
+        let proxyUrl: string | undefined;
 
-        if (requestUrlParsed.protocol === 'https:') {
+        if (requestUrlParsed.protocol === "https:") {
             proxyUrl = config.proxyHttpsUrl || undefined;
         }
-        if (requestUrlParsed.protocol === 'http:') {
+        if (requestUrlParsed.protocol === "http:") {
             proxyUrl = config.proxyHttpUrl || undefined;
         }
 
         if (proxyUrl) {
-            if (proxyUrl.indexOf('//') === 0) {
-                proxyUrl = 'http:' + proxyUrl;
+            if (proxyUrl.startsWith("//")) {
+                proxyUrl = "http:" + proxyUrl;
             }
-            var proxyUrlParsed = url.parse(proxyUrl);
+            const proxyUrlParsed = url.parse(proxyUrl);
 
             // https is not supported at the moment
-            if (proxyUrlParsed.protocol === 'https:') {
+            if (proxyUrlParsed.protocol === "https:") {
                 Logging.info("Proxies that use HTTPS are not supported");
                 proxyUrl = undefined;
             } else {
-                options = {...options,
+                options = {
+                    ...options,
                     host: proxyUrlParsed.hostname,
                     port: proxyUrlParsed.port || "80",
                     path: requestUrl,
-                    headers: {...options.headers,
-                        Host: requestUrlParsed.hostname,
-                    },
+                    headers: { ...options.headers, Host: requestUrlParsed.hostname ?? undefined },
                 };
             }
         }
 
-        var isHttps = requestUrlParsed.protocol === 'https:' && !proxyUrl;
+        const isHttps = requestUrlParsed.protocol === "https:" && !proxyUrl;
 
         if (isHttps && config.httpsAgent !== undefined) {
             options.agent = config.httpsAgent;
@@ -321,45 +350,59 @@ class Util {
         } else {
             return http.request(<any>options, requestCallback);
         }
-
-    };
+    }
 
     /**
      * Parse standard <string | string[] | number> request-context header
      */
-    public static safeIncludeCorrelationHeader(client: TelemetryClient, request: http.ClientRequest | http.ServerResponse, correlationHeader: any) {
+    public static safeIncludeCorrelationHeader(
+        client: TelemetryClient,
+        request: http.ClientRequest | http.ServerResponse,
+        correlationHeader: any
+    ) {
         let header: string; // attempt to cast correlationHeader to string
         if (typeof correlationHeader === "string") {
             header = correlationHeader;
-        } else if (correlationHeader instanceof Array) { // string[]
+        } else if (correlationHeader instanceof Array) {
+            // string[]
             header = correlationHeader.join(",");
-        } else if (correlationHeader && typeof (correlationHeader as any).toString === "function") {
+        } else if (correlationHeader && typeof correlationHeader.toString === "function") {
             // best effort attempt: requires well-defined toString
             try {
-                header = (correlationHeader as any).toString();
+                header = correlationHeader.toString();
             } catch (err) {
-                Logging.warn("Outgoing request-context header could not be read. Correlation of requests may be lost.", err, correlationHeader);
+                Logging.warn(
+                    "Outgoing request-context header could not be read. Correlation of requests may be lost.",
+                    err,
+                    correlationHeader
+                );
             }
         }
 
-        if (header) {
+        if (typeof header !== "undefined") {
             Util.addCorrelationIdHeaderFromString(client, request, header);
         } else {
             request.setHeader(
                 RequestResponseHeaders.requestContextHeader,
-                `${RequestResponseHeaders.requestContextSourceKey}=${client.config.correlationId}`);
+                `${RequestResponseHeaders.requestContextSourceKey}=${client.config.correlationId}`
+            );
         }
     }
 
-    private static addCorrelationIdHeaderFromString(client: TelemetryClient, response: http.ClientRequest | http.ServerResponse, correlationHeader: string) {
+    private static addCorrelationIdHeaderFromString(
+        client: TelemetryClient,
+        response: http.ClientRequest | http.ServerResponse,
+        correlationHeader: string
+    ) {
         const components = correlationHeader.split(",");
         const key = `${RequestResponseHeaders.requestContextSourceKey}=`;
-        const found = components.some(value => value.substring(0,key.length) === key);
+        const found = components.some((value) => value.startsWith(key));
 
         if (!found) {
             response.setHeader(
                 RequestResponseHeaders.requestContextHeader,
-                `${correlationHeader},${RequestResponseHeaders.requestContextSourceKey}=${client.config.correlationId}`);
+                `${correlationHeader},${RequestResponseHeaders.requestContextSourceKey}=${client.config.correlationId}`
+            );
         }
     }
 }

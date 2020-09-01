@@ -1,21 +1,17 @@
 import assert = require("assert");
-import sinon = require("sinon");
-import Client = require("../../Library/TelemetryClient");
 
 import Sampling = require("../../TelemetryProcessors/SamplingTelemetryProcessor");
 
 describe("TelemetryProcessors/SamplingTelemetryProcessor", () => {
-    var iKey = "Instrumentation-Key-12345-6789A";
-    var name = "name";
-    var value = 3;
-    var mockData = <any>{ baseData: { properties: {} }, baseType: "BaseTestData" };
-    var client = new Client(iKey);
+    const mockData = <any>{ baseData: { properties: {} }, baseType: "BaseTestData" };
 
     describe("#samplingTelemetryProcessor()", () => {
         it("will not send data on 0% sampling", () => {
             mockData.sampleRate = 0;
 
-            var result = Sampling.samplingTelemetryProcessor(mockData, {correlationContext: null});
+            const result = Sampling.samplingTelemetryProcessor(mockData, {
+                correlationContext: null,
+            });
 
             assert.equal(result, false, "data should not pass");
         });
@@ -24,47 +20,55 @@ describe("TelemetryProcessors/SamplingTelemetryProcessor", () => {
             mockData.sampleRate = 0;
 
             mockData.baseType = "MetricData";
-            var result = Sampling.samplingTelemetryProcessor(mockData, {correlationContext: null});
+            const result = Sampling.samplingTelemetryProcessor(mockData, {
+                correlationContext: null,
+            });
             mockData.baseType = "BaseTestData";
 
             assert.equal(result, false, "data should not pass");
         });
 
         it("will send data roughly 1/3 of the time on 33% sampling", () => {
-            var iterations = 1000;
-            var accepted = 0;
+            const iterations = 1000;
+            let accepted = 0;
             mockData.sampleRate = 33;
 
-            for (var i=0; i<iterations; i++) {
-                var result = Sampling.samplingTelemetryProcessor(mockData, {correlationContext: null});
+            for (let i = 0; i < iterations; i++) {
+                const result = Sampling.samplingTelemetryProcessor(mockData, {
+                    correlationContext: null,
+                });
                 if (result) accepted++;
             }
 
-            assert.ok(accepted > (iterations * 0.25), "data should pass more than 25% of the time");
-            assert.ok(accepted < (iterations * 0.45), "data should pass less than 45% the time");
+            assert.ok(accepted > iterations * 0.25, "data should pass more than 25% of the time");
+            assert.ok(accepted < iterations * 0.45, "data should pass less than 45% the time");
         });
 
         it("will send data roughly 1/2 of the time on 50% sampling", () => {
-            var iterations = 1000;
-            var accepted = 0;
+            const iterations = 1000;
+            let accepted = 0;
             mockData.sampleRate = 50;
 
-            for (var i=0; i<iterations; i++) {
-                var result = Sampling.samplingTelemetryProcessor(mockData, {correlationContext: null});
+            for (let i = 0; i < iterations; i++) {
+                const result = Sampling.samplingTelemetryProcessor(mockData, {
+                    correlationContext: null,
+                });
                 if (result) accepted++;
             }
 
-            assert.ok(accepted > (iterations * 0.40), "data should pass more than 40% of the time");
-            assert.ok(accepted < (iterations * 0.60), "data should pass less than 60% the time");
+            assert.ok(accepted > iterations * 0.4, "data should pass more than 40% of the time");
+            assert.ok(accepted < iterations * 0.6, "data should pass less than 60% the time");
         });
 
         it("will send data all of the time on 100% sampling", () => {
-            var iterations = 1000;
-            var accepted = 0;
+            const iterations = 1000;
+            let accepted = 0;
             mockData.sampleRate = 100;
 
-            for (var i=0; i<iterations; i++) {
-                var result = Sampling.samplingTelemetryProcessor(mockData, {correlationContext: null});
+            for (let i = 0; i < iterations; i++) {
+                const result = Sampling.samplingTelemetryProcessor(mockData, {
+                    correlationContext: null,
+                });
                 if (result) accepted++;
             }
 
@@ -72,12 +76,14 @@ describe("TelemetryProcessors/SamplingTelemetryProcessor", () => {
         });
 
         it("will keep all telemetry from an operation together if correlation tracking is enabled", () => {
-            var iterations = 1000;
-            var accepted = 0;
+            const iterations = 1000;
+            let accepted = 0;
             mockData.sampleRate = 33;
 
-            for (var i=0; i<iterations; i++) {
-                var result = Sampling.samplingTelemetryProcessor(mockData, <any>{correlationContext: {traceFlags: 1}});
+            for (let i = 0; i < iterations; i++) {
+                const result = Sampling.samplingTelemetryProcessor(mockData, <any>{
+                    correlationContext: { traceFlags: 1 },
+                });
                 if (result) accepted++;
             }
 
@@ -85,12 +91,14 @@ describe("TelemetryProcessors/SamplingTelemetryProcessor", () => {
         });
 
         it("will keep all telemetry from an operation together if correlation tracking is enabled #2", () => {
-            var iterations = 1000;
-            var accepted = 0;
+            const iterations = 1000;
+            let accepted = 0;
             mockData.sampleRate = 33;
 
-            for (var i=0; i<iterations; i++) {
-                var result = Sampling.samplingTelemetryProcessor(mockData, <any>{correlationContext: {operation: {id: "abc"}}});
+            for (let i = 0; i < iterations; i++) {
+                const result = Sampling.samplingTelemetryProcessor(mockData, <any>{
+                    correlationContext: { operation: { id: "abc" } },
+                });
                 if (result) accepted++;
             }
 
@@ -100,7 +108,7 @@ describe("TelemetryProcessors/SamplingTelemetryProcessor", () => {
     describe("#getSamplingHashCode()", () => {
         it("has results consistent with .net", () => {
             // test array is produced by .net sdk test
-            var testArray = [
+            const testArray = [
                 ["ss", 1179811869],
                 ["kxi", 34202699],
                 ["wr", 1281077591],
@@ -143,10 +151,10 @@ describe("TelemetryProcessors/SamplingTelemetryProcessor", () => {
                 ["hqmyv", 1510970959],
             ];
 
-            var csharpMax = 2147483647;
-            for (var i = 0; i < testArray.length; ++i) {
-                var res = Sampling.getSamplingHashCode(<string>testArray[i][0]);
-                assert.equal(res, <number>testArray[i][1]/csharpMax * 100);
+            const csharpMax = 2147483647;
+            for (let i = 0; i < testArray.length; ++i) {
+                const res = Sampling.getSamplingHashCode(<string>testArray[i][0]);
+                assert.equal(res, (<number>testArray[i][1] / csharpMax) * 100);
             }
         });
     });

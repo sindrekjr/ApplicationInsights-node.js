@@ -1,21 +1,22 @@
 import assert = require("assert");
 import sinon = require("sinon");
-var http = require("http");
-var https = require("https");
+const http = require("http");
+const https = require("https");
 
 import Config = require("../../Library/Config");
 import Constants = require("../../Declarations/Constants");
 
 describe("Library/Config", () => {
-
-    var iKey = "1aa11111-bbbb-1ccc-8ddd-eeeeffff3333";
-    var appVer = "appVer";
+    const iKey = "1aa11111-bbbb-1ccc-8ddd-eeeeffff3333";
 
     describe("#constructor", () => {
         describe("connection string && API && environment variable prioritization", () => {
-            it ("connection string set via in code setup", () => {
-                var env = { [Config.ENV_connectionString]: "InStruMenTatioNKey=cs.env", [Config.ENV_iKey]: "ikey.env"};
-                var originalEnv = process.env;
+            it("connection string set via in code setup", () => {
+                const env = {
+                    [Config.ENV_connectionString]: "InStruMenTatioNKey=cs.env",
+                    [Config.ENV_iKey]: "ikey.env",
+                };
+                const originalEnv = process.env;
                 process.env = env;
                 const config = new Config("InStruMenTatioNKey=cs.code");
                 assert.deepEqual(config.instrumentationKey, "cs.code");
@@ -23,8 +24,11 @@ describe("Library/Config", () => {
             });
 
             it("instrumentation key set via in code setup", () => {
-                var env = { [Config.ENV_connectionString]: "InStruMenTatioNKey=CS.env", [Config.ENV_iKey]: "ikey.env"};
-                var originalEnv = process.env;
+                const env = {
+                    [Config.ENV_connectionString]: "InStruMenTatioNKey=CS.env",
+                    [Config.ENV_iKey]: "ikey.env",
+                };
+                const originalEnv = process.env;
                 process.env = env;
                 const config = new Config("ikey.code");
                 assert.deepEqual(config.instrumentationKey, "ikey.code");
@@ -32,8 +36,11 @@ describe("Library/Config", () => {
             });
 
             it("connection string set via environment variable", () => {
-                var env = { [Config.ENV_connectionString]: "InStruMenTatioNKey=cs.env", [Config.ENV_iKey]: "ikey.env"};
-                var originalEnv = process.env;
+                const env = {
+                    [Config.ENV_connectionString]: "InStruMenTatioNKey=cs.env",
+                    [Config.ENV_iKey]: "ikey.env",
+                };
+                const originalEnv = process.env;
                 process.env = env;
                 const config = new Config();
                 assert.deepEqual(config.instrumentationKey, "cs.env");
@@ -41,8 +48,8 @@ describe("Library/Config", () => {
             });
 
             it("instrumentation key set via environment variable", () => {
-                var env = { [Config.ENV_iKey]: "ikey.env"};
-                var originalEnv = process.env;
+                const env = { [Config.ENV_iKey]: "ikey.env" };
+                const originalEnv = process.env;
                 process.env = env;
                 const config = new Config();
                 assert.deepEqual(config.instrumentationKey, "ikey.env");
@@ -50,55 +57,59 @@ describe("Library/Config", () => {
             });
 
             it("should parse the host of livemetrics host, if provided", () => {
-                const config = new Config("InStruMenTatioNKey=ikey;LiveEndpoint=https://live.applicationinsights.io/foo/bar");
+                const config = new Config(
+                    "InStruMenTatioNKey=ikey;LiveEndpoint=https://live.applicationinsights.io/foo/bar"
+                );
                 assert.deepEqual(config.quickPulseHost, "live.applicationinsights.io");
             });
 
             it("should parse the host of livemetrics host from location+suffix, if provided", () => {
-                const config = new Config("InStruMenTatioNKey=ikey;Location=wus2;EndpointSuffix=example.com");
+                const config = new Config(
+                    "InStruMenTatioNKey=ikey;Location=wus2;EndpointSuffix=example.com"
+                );
                 assert.deepEqual(config.quickPulseHost, "wus2.live.example.com");
             });
         });
 
         describe("constructor(ikey)", () => {
-            beforeEach(()=> {
-                sinon.stub(http, 'request');
-                sinon.stub(https, 'request');
+            beforeEach(() => {
+                sinon.stub(http, "request");
+                sinon.stub(https, "request");
             });
             afterEach(() => {
                 http.request.restore();
                 https.request.restore();
             });
             it("should throw if no iKey is available", () => {
-                var env = {};
-                var originalEnv = process.env;
+                const env = {};
+                const originalEnv = process.env;
                 process.env = env;
                 assert.throws(() => new Config());
                 process.env = originalEnv;
             });
 
             it("should read iKey from environment", () => {
-                var env = <{[id: string]: string}>{};
+                const env = <{ [id: string]: string }>{};
                 env[Config.ENV_iKey] = iKey;
-                var originalEnv = process.env;
+                const originalEnv = process.env;
                 process.env = env;
-                var config = new Config();
+                const config = new Config();
                 assert.equal(config.instrumentationKey, iKey);
                 process.env = originalEnv;
             });
 
             it("should read iKey from azure environment", () => {
-                var env = <{[id: string]: string}>{};
+                const env = <{ [id: string]: string }>{};
                 env[Config.ENV_azurePrefix + Config.ENV_iKey] = iKey;
-                var originalEnv = process.env;
+                const originalEnv = process.env;
                 process.env = env;
-                var config = new Config();
+                const config = new Config();
                 assert.equal(config.instrumentationKey, iKey);
                 process.env = originalEnv;
             });
 
             it("should initialize valid values", () => {
-                var config = new Config("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333");
+                const config = new Config("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333");
                 assert(typeof config.instrumentationKey === "string");
                 assert(typeof config.endpointUrl === "string");
                 assert(typeof config.maxBatchSize === "number");
@@ -111,7 +122,7 @@ describe("Library/Config", () => {
             });
 
             it("should initialize values that we claim in README", () => {
-                var config = new Config("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333");
+                const config = new Config("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333");
                 assert(config.maxBatchSize === 250);
                 assert(config.maxBatchIntervalMs === 15000);
                 assert(config.disableAppInsights === false);
@@ -126,37 +137,42 @@ describe("Library/Config", () => {
             it("should initialize values that we claim in README (2)", () => {
                 process.env.http_proxy = "test";
                 process.env.https_proxy = "test2";
-                var config = new Config("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333");
+                const config = new Config("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333");
                 assert(config.proxyHttpUrl === "test");
                 assert(config.proxyHttpsUrl === "test2");
             });
 
             it("should add azure domain to excluded list", () => {
-                var config = new Config("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333");
-                assert.equal(config.correlationHeaderExcludedDomains[0].toString(), "*.core.windows.net");
+                const config = new Config("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333");
+                assert.equal(
+                    config.correlationHeaderExcludedDomains[0].toString(),
+                    "*.core.windows.net"
+                );
             });
 
             it("instrumentation key validation-valid key passed", () => {
-                var warnStub = sinon.stub(console, "warn");
-                var config = new Config("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333");
+                const warnStub = sinon.stub(console, "warn");
+                const config = new Config("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333");
+                assert.ok(config);
                 assert.ok(warnStub.notCalled, "warning was not raised");
                 warnStub.restore();
             });
 
             it("instrumentation key validation-invalid key passed", () => {
-                var warnStub = sinon.stub(console, "warn");
-                var config = new Config("1aa11111bbbb1ccc8dddeeeeffff3333");
+                const warnStub = sinon.stub(console, "warn");
+                const config = new Config("1aa11111bbbb1ccc8dddeeeeffff3333");
+                assert.ok(config);
                 assert.ok(warnStub.calledOn, "warning was raised");
                 warnStub.restore();
             });
 
             it("instrumentation key validation-invalid key passed", () => {
-                var warnStub = sinon.stub(console, "warn");
-                var config = new Config("abc");
+                const warnStub = sinon.stub(console, "warn");
+                const config = new Config("abc");
+                assert.ok(config);
                 assert.ok(warnStub.calledOn, "warning was raised");
                 warnStub.restore();
             });
-
         });
     });
 });

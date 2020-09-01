@@ -13,13 +13,13 @@ describe("ApplicationInsights", () => {
 
     after(() => {
         setupSpanExporterStub.restore();
-    })
+    });
 
     describe("#setup()", () => {
-        var AppInsights = require("../applicationinsights");
-        var Console = require("../AutoCollection/Console");
-        var Exceptions = require("../AutoCollection/Exceptions");
-        var Performance = require("../AutoCollection/Performance");
+        const AppInsights = require("../applicationinsights");
+        const Console = require("../AutoCollection/Console");
+        const Exceptions = require("../AutoCollection/Exceptions");
+        const Performance = require("../AutoCollection/Performance");
         beforeEach(() => {
             Console.INSTANCE = undefined;
             Exceptions.INSTANCE = undefined;
@@ -28,7 +28,7 @@ describe("ApplicationInsights", () => {
         });
 
         it("should not warn if setup is called once", () => {
-            var warnStub = sinon.spy(console, "warn");
+            const warnStub = sinon.spy(console, "warn");
             AppInsights.defaultClient = undefined;
             AppInsights.setup("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333");
             assert.ok(warnStub.notCalled, "warning was not raised");
@@ -36,7 +36,7 @@ describe("ApplicationInsights", () => {
         });
 
         it("should warn if setup is called twice", () => {
-            var warnStub = sinon.spy(console, "warn");
+            const warnStub = sinon.spy(console, "warn");
             AppInsights.defaultClient = undefined;
             AppInsights.setup("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333");
             AppInsights.setup("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333");
@@ -45,10 +45,10 @@ describe("ApplicationInsights", () => {
         });
 
         it("should not overwrite default client if called more than once", () => {
-            var warnStub = sinon.stub(console, "warn");
+            const warnStub = sinon.stub(console, "warn");
             AppInsights.defaultClient = undefined;
             AppInsights.setup("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333");
-            var client = AppInsights.defaultClient;
+            const client = AppInsights.defaultClient;
             AppInsights.setup("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333");
             AppInsights.setup("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333");
             AppInsights.setup("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333");
@@ -58,10 +58,10 @@ describe("ApplicationInsights", () => {
     });
 
     describe("#start()", () => {
-        var AppInsights = require("../applicationinsights");
-        var Console = require("../AutoCollection/Console");
-        var Exceptions = require("../AutoCollection/Exceptions");
-        var Performance = require("../AutoCollection/Performance");
+        const AppInsights = require("../applicationinsights");
+        const Console = require("../AutoCollection/Console");
+        const Exceptions = require("../AutoCollection/Exceptions");
+        const Performance = require("../AutoCollection/Performance");
 
         beforeEach(() => {
             Console.INSTANCE = undefined;
@@ -69,17 +69,17 @@ describe("ApplicationInsights", () => {
             Performance.INSTANCE = undefined;
         });
 
-        afterEach(() => AppInsights.defaultClient = undefined);
+        afterEach(() => (AppInsights.defaultClient = undefined));
 
         it("should warn if start is called before setup", () => {
-            var warnStub = sinon.stub(console, "warn");
+            const warnStub = sinon.stub(console, "warn");
             AppInsights.start();
             assert.ok(warnStub.calledOn, "warning was raised");
             warnStub.restore();
         });
 
         it("should not warn if start is called after setup", () => {
-            var warnStub = sinon.stub(console, "warn");
+            const warnStub = sinon.stub(console, "warn");
             AppInsights.setup("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333").start();
             assert.ok(warnStub.notCalled, "warning was not raised");
             warnStub.restore();
@@ -87,25 +87,35 @@ describe("ApplicationInsights", () => {
 
         it("should not start live metrics", () => {
             AppInsights.setup("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333").start();
-            assert.equal(AppInsights.liveMetricsClient, undefined, "live metrics client is not defined");
+            assert.equal(
+                AppInsights.liveMetricsClient,
+                undefined,
+                "live metrics client is not defined"
+            );
         });
 
         it("should not start live metrics", () => {
-            AppInsights.setup("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333").setSendLiveMetrics(false).start();
-            assert.equal(AppInsights.liveMetricsClient, undefined, "live metrics client is not defined");
+            AppInsights.setup("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333")
+                .setSendLiveMetrics(false)
+                .start();
+            assert.equal(
+                AppInsights.liveMetricsClient,
+                undefined,
+                "live metrics client is not defined"
+            );
         });
     });
 
     describe("#setDistributedTracingMode", () => {
-        var AppInsights = require("../applicationinsights");
-        var CorrelationIdManager = require("../Library/CorrelationIdManager");
+        const AppInsights = require("../applicationinsights");
+        const CorrelationIdManager = require("../Library/CorrelationIdManager");
 
         beforeEach(() => {
             AppInsights.dispose();
         });
         afterEach(() => {
             AppInsights.dispose();
-        })
+        });
 
         it("should enable W3C tracing mode by default", () => {
             AppInsights.setup("aa11111-bbbb-1ccc-8ddd-eeeeffff3333").start();
@@ -114,16 +124,18 @@ describe("ApplicationInsights", () => {
 
         it("(backcompat) (no-op) should be able to enable W3C tracing mode via enum", () => {
             assert.doesNotThrow(() => {
-                AppInsights.setup("aa11111-bbbb-1ccc-8ddd-eeeeffff3333").setDistributedTracingMode(DistributedTracingModes.AI_AND_W3C).start();
+                AppInsights.setup("aa11111-bbbb-1ccc-8ddd-eeeeffff3333")
+                    .setDistributedTracingMode(DistributedTracingModes.AI_AND_W3C)
+                    .start();
             });
         });
     });
 
     describe("#setAutoCollect", () => {
-        var AppInsights = require("../applicationinsights");
-        var Console = require("../AutoCollection/Console");
-        var Exceptions = require("../AutoCollection/Exceptions");
-        var Performance = require("../AutoCollection/Performance");
+        const AppInsights = require("../applicationinsights");
+        const Console = require("../AutoCollection/Console");
+        const Exceptions = require("../AutoCollection/Exceptions");
+        const Performance = require("../AutoCollection/Performance");
 
         beforeEach(() => {
             AppInsights.defaultClient = undefined;
@@ -157,11 +169,14 @@ describe("ApplicationInsights", () => {
     });
 
     describe("#Provide access to contracts", () => {
-        var AppInsights = require("../applicationinsights");
-        var Contracts = require("../Declarations/Contracts");
+        const AppInsights = require("../applicationinsights");
+        const Contracts = require("../Declarations/Contracts");
 
         it("should provide access to severity levels", () => {
-            assert.equal(AppInsights.Contracts.SeverityLevel.Information, Contracts.SeverityLevel.Information);
+            assert.equal(
+                AppInsights.Contracts.SeverityLevel.Information,
+                Contracts.SeverityLevel.Information
+            );
         });
     });
 });

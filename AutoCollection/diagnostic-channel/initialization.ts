@@ -14,13 +14,13 @@ if (IsInitialized) {
     const publishers: typeof DiagChannelPublishers = require("diagnostic-channel-publishers");
     const individualOptOuts: string = process.env["APPLICATION_INSIGHTS_NO_PATCH_MODULES"] || "";
     const unpatchedModules = individualOptOuts.split(",");
-    const modules: {[key: string] : any} = {
+    const modules: { [key: string]: any } = {
         bunyan: publishers.bunyan,
         console: publishers.console,
         winston: publishers.winston,
     };
     for (const mod in modules) {
-        if (unpatchedModules.indexOf(mod) === -1) {
+        if (!unpatchedModules.includes(mod)) {
             modules[mod].enable();
             Logging.info(TAG, `Subscribed to ${mod} events`);
         }
@@ -29,13 +29,16 @@ if (IsInitialized) {
         Logging.info(TAG, "Some modules will not be patched", unpatchedModules);
     }
 } else {
-    Logging.info(TAG, "Not subscribing to dependency autocollection because APPLICATION_INSIGHTS_NO_DIAGNOSTIC_CHANNEL was set");
+    Logging.info(
+        TAG,
+        "Not subscribing to dependency autocollection because APPLICATION_INSIGHTS_NO_DIAGNOSTIC_CHANNEL was set"
+    );
 }
 
 export function registerContextPreservation(cb: (cb: Function) => Function) {
     if (!IsInitialized) {
         return;
     }
-    const diagChannel = (require("diagnostic-channel") as typeof DiagChannel);
+    const diagChannel = require("diagnostic-channel") as typeof DiagChannel;
     diagChannel.channel.addContextPreservation(cb);
 }

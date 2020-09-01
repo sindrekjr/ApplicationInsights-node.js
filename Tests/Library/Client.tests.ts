@@ -1,9 +1,9 @@
 import assert = require("assert");
-import crypto = require('crypto');
+import crypto = require("crypto");
 import sinon = require("sinon");
 import Sinon = require("sinon");
 import http = require("http");
-import eventEmitter = require('events');
+import eventEmitter = require("events");
 
 import Client = require("../../Library/TelemetryClient");
 import Config = require("../../Library/Config");
@@ -26,10 +26,9 @@ function numberToHrtime(epochMillis: number): HrTime {
     const seconds = Math.trunc(epochSeconds);
     // Round sub-nanosecond accuracy to nanosecond.
     const nanos =
-      Number((epochSeconds - seconds).toFixed(NANOSECOND_DIGITS)) *
-      SECOND_TO_NANOSECONDS;
+        Number((epochSeconds - seconds).toFixed(NANOSECOND_DIGITS)) * SECOND_TO_NANOSECONDS;
     return [seconds, nanos];
-  }
+}
 
 class TestSpanProcessor implements SpanProcessor {
     exportedSpans: ReadableSpan[] = [];
@@ -46,32 +45,37 @@ class TestSpanProcessor implements SpanProcessor {
     shutdown(): void {
         this.exportedSpans = [];
     }
-
 }
 
 describe("Library/TelemetryClient", () => {
-
-    var iKey = "1aa11111-bbbb-1ccc-8ddd-eeeeffff3333";
-    var appId = "Application-Key-12345-6789A";
-    var name = "name";
-    var value = 3;
+    const iKey = "1aa11111-bbbb-1ccc-8ddd-eeeeffff3333";
+    const appId = "Application-Key-12345-6789A";
+    const name = "name";
+    const value = 3;
     const startTime = new Date();
     const memoryExporter = new TestSpanProcessor();
-    var testEventTelemetry = <Contracts.EventTelemetry>{ name: "testEvent" };
-    var properties: { [key: string]: string; } = { p1: "p1", p2: "p2", common: "commonArg" };
-    var failedProperties: { [key: string]: string; } = { p1: "p1", p2: "p2", common: "commonArg", errorProp: "errorVal" };
-    var measurements: { [key: string]: number; } = { m1: 1, m2: 2 };
+    const testEventTelemetry = <Contracts.EventTelemetry>{ name: "testEvent" };
+    const properties: { [key: string]: string } = { p1: "p1", p2: "p2", common: "commonArg" };
+    const failedProperties: { [key: string]: string } = {
+        p1: "p1",
+        p2: "p2",
+        common: "commonArg",
+        errorProp: "errorVal",
+    };
+    const measurements: { [key: string]: number } = { m1: 1, m2: 2 };
     let client: Client;
-    var trackStub: Sinon.SinonStub;
-    var triggerStub: Sinon.SinonStub;
-    var sendStub: Sinon.SinonStub;
-    var saveOnCrashStub: Sinon.SinonStub;
+    let trackStub: Sinon.SinonStub;
+    let triggerStub: Sinon.SinonStub;
+    let sendStub: Sinon.SinonStub;
+    let saveOnCrashStub: Sinon.SinonStub;
     let getSpanProcessorStub: Sinon.SinonStub;
 
     beforeEach(() => {
         client = new Client(iKey);
         client.config.correlationId = `cid-v1:${appId}`;
-        getSpanProcessorStub = sinon.stub(Provider.tracer, "getActiveSpanProcessor").returns(memoryExporter);
+        getSpanProcessorStub = sinon
+            .stub(Provider.tracer, "getActiveSpanProcessor")
+            .returns(memoryExporter);
         trackStub = sinon.stub(client, "track");
         triggerStub = sinon.stub(client.channel, "triggerSend");
         sendStub = sinon.stub(client.channel, "send");
@@ -89,7 +93,7 @@ describe("Library/TelemetryClient", () => {
         memoryExporter.shutdown(); // reset
     });
 
-    var invalidInputHelper = (name: string) => {
+    const invalidInputHelper = (name: string) => {
         assert.doesNotThrow(() => (<any>client)[name](null, null), "#1");
         assert.doesNotThrow(() => (<any>client)[name](<any>undefined, <any>undefined), "#2");
         assert.doesNotThrow(() => (<any>client)[name](<any>{}, <any>{}), "#3");
@@ -101,24 +105,24 @@ describe("Library/TelemetryClient", () => {
 
     describe("#constructor()", () => {
         it("should initialize config", () => {
-            var client = new Client("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333");
+            const client = new Client("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333");
             assert.ok(client.config);
             assert.ok(client.config.instrumentationKey);
         });
 
         it("should initialize context", () => {
-            var client = new Client("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333");
+            const client = new Client("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333");
             assert.ok(client.context);
             assert.ok(client.context.tags);
         });
 
         it("should initialize common properties", () => {
-            var client = new Client("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333");
+            const client = new Client("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333");
             assert.ok(client.commonProperties);
         });
 
         it("should initialize channel", () => {
-            var client = new Client("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333");
+            const client = new Client("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333");
             assert.ok(client.channel);
         });
     });
@@ -132,9 +136,9 @@ describe("Library/TelemetryClient", () => {
 
             assert.ok(trackStub.calledThrice);
 
-            var eventTelemetry1 = <Contracts.EventTelemetry>trackStub.firstCall.args[0];
-            var eventTelemetry2 = <Contracts.EventTelemetry>trackStub.secondCall.args[0];
-            var eventTelemetry3 = <Contracts.EventTelemetry>trackStub.thirdCall.args[0];
+            const eventTelemetry1 = <Contracts.EventTelemetry>trackStub.firstCall.args[0];
+            const eventTelemetry2 = <Contracts.EventTelemetry>trackStub.secondCall.args[0];
+            const eventTelemetry3 = <Contracts.EventTelemetry>trackStub.thirdCall.args[0];
 
             assert.equal(eventTelemetry1.name, name);
             assert.equal(eventTelemetry2.name, name);
@@ -158,9 +162,9 @@ describe("Library/TelemetryClient", () => {
 
             assert.ok(trackStub.calledThrice);
 
-            var eventTelemetry1 = <Contracts.PageViewTelemetry>trackStub.firstCall.args[0];
-            var eventTelemetry2 = <Contracts.PageViewTelemetry>trackStub.secondCall.args[0];
-            var eventTelemetry3 = <Contracts.PageViewTelemetry>trackStub.thirdCall.args[0];
+            const eventTelemetry1 = <Contracts.PageViewTelemetry>trackStub.firstCall.args[0];
+            const eventTelemetry2 = <Contracts.PageViewTelemetry>trackStub.secondCall.args[0];
+            const eventTelemetry3 = <Contracts.PageViewTelemetry>trackStub.thirdCall.args[0];
 
             assert.equal(eventTelemetry1.name, name);
             assert.equal(eventTelemetry2.name, name);
@@ -185,9 +189,9 @@ describe("Library/TelemetryClient", () => {
 
             assert.ok(trackStub.calledThrice);
 
-            var traceTelemetry1 = <Contracts.TraceTelemetry>trackStub.firstCall.args[0];
-            var traceTelemetry2 = <Contracts.TraceTelemetry>trackStub.secondCall.args[0];
-            var traceTelemetry3 = <Contracts.TraceTelemetry>trackStub.thirdCall.args[0];
+            const traceTelemetry1 = <Contracts.TraceTelemetry>trackStub.firstCall.args[0];
+            const traceTelemetry2 = <Contracts.TraceTelemetry>trackStub.secondCall.args[0];
+            const traceTelemetry3 = <Contracts.TraceTelemetry>trackStub.thirdCall.args[0];
 
             assert.equal(traceTelemetry1.message, name);
             assert.equal(traceTelemetry2.message, name);
@@ -202,19 +206,25 @@ describe("Library/TelemetryClient", () => {
         });
     });
 
-
     describe("#trackAvailability()", () => {
         it("should track availability with correct data", () => {
             trackStub.reset();
-            const expectedTelemetryData: Contracts.AvailabilityTelemetry =  {
-                duration: 100, id: "id1", message: "message1",success : true, name: "name1", runLocation: "east us"
+            const expectedTelemetryData: Contracts.AvailabilityTelemetry = {
+                duration: 100,
+                id: "id1",
+                message: "message1",
+                success: true,
+                name: "name1",
+                runLocation: "east us",
             };
 
             client.trackAvailability(expectedTelemetryData);
 
             assert.ok(trackStub.calledOnce);
 
-            const availabilityTelemetry = <Contracts.AvailabilityTelemetry>trackStub.firstCall.args[0];
+            const availabilityTelemetry = <Contracts.AvailabilityTelemetry>(
+                trackStub.firstCall.args[0]
+            );
 
             assert.equal(availabilityTelemetry.message, expectedTelemetryData.message);
             assert.equal(availabilityTelemetry.name, expectedTelemetryData.name);
@@ -233,8 +243,7 @@ describe("Library/TelemetryClient", () => {
 
             assert.ok(trackStub.calledOnce);
 
-            var exceptionTelemetry = <Contracts.ExceptionTelemetry>trackStub.firstCall.args[0];
-
+            const exceptionTelemetry = <Contracts.ExceptionTelemetry>trackStub.firstCall.args[0];
 
             assert.equal(exceptionTelemetry.exception.message, name);
         });
@@ -245,18 +254,22 @@ describe("Library/TelemetryClient", () => {
 
             assert.ok(trackStub.calledOnce);
 
-            var exceptionTelemetry = <Contracts.ExceptionTelemetry>trackStub.firstCall.args[0];
+            const exceptionTelemetry = <Contracts.ExceptionTelemetry>trackStub.firstCall.args[0];
             assert.equal(exceptionTelemetry.exception.message, name);
             assert.deepEqual(exceptionTelemetry.properties, properties);
         });
 
         it("should track Exception with correct data - Error, properties and measurements", () => {
             trackStub.reset();
-            client.trackException({ exception: new Error(name), properties: properties, measurements: measurements });
+            client.trackException({
+                exception: new Error(name),
+                properties: properties,
+                measurements: measurements,
+            });
 
             assert.ok(trackStub.calledOnce);
 
-            var exceptionTelemetry = <Contracts.ExceptionTelemetry>trackStub.firstCall.args[0];
+            const exceptionTelemetry = <Contracts.ExceptionTelemetry>trackStub.firstCall.args[0];
 
             assert.equal(exceptionTelemetry.exception.message, name);
             assert.deepEqual(exceptionTelemetry.properties, properties);
@@ -271,17 +284,25 @@ describe("Library/TelemetryClient", () => {
     describe("#trackMetric()", () => {
         it("should track Metric with correct data", () => {
             trackStub.reset();
-            var count = 1;
-            var min = 0;
-            var max = 0;
-            var stdev = 0;
+            const count = 1;
+            const min = 0;
+            const max = 0;
+            const stdev = 0;
             client.trackMetric({ name: name, value: value });
-            client.trackMetric({ name: name, value: value, count: count, min: min, max: max, stdDev: stdev, properties: properties });
+            client.trackMetric({
+                name: name,
+                value: value,
+                count: count,
+                min: min,
+                max: max,
+                stdDev: stdev,
+                properties: properties,
+            });
 
             assert.ok(trackStub.calledTwice);
 
-            var metricTelemetry1 = <Contracts.MetricTelemetry>trackStub.firstCall.args[0];
-            var metricTelemetry2 = <Contracts.MetricTelemetry>trackStub.secondCall.args[0];
+            const metricTelemetry1 = <Contracts.MetricTelemetry>trackStub.firstCall.args[0];
+            const metricTelemetry2 = <Contracts.MetricTelemetry>trackStub.secondCall.args[0];
 
             assert.equal(metricTelemetry1.name, name);
             assert.equal(metricTelemetry1.value, value);
@@ -302,9 +323,18 @@ describe("Library/TelemetryClient", () => {
 
     describe("#trackDependency()", () => {
         it("should create span with correct properties", () => {
-            var data = "http://bing.com/search?q=test";
-            var dependencyTypeName = "dependencyTypeName";
-            client.trackDependency({ name: name, data: data, duration: value, success: true, resultCode: 200, dependencyTypeName: dependencyTypeName, properties: properties, time: startTime });
+            const data = "http://bing.com/search?q=test";
+            const dependencyTypeName = "dependencyTypeName";
+            client.trackDependency({
+                name: name,
+                data: data,
+                duration: value,
+                success: true,
+                resultCode: 200,
+                dependencyTypeName: dependencyTypeName,
+                properties: properties,
+                time: startTime,
+            });
             assert.strictEqual(memoryExporter.exportedSpans.length, 1);
 
             const span = memoryExporter.exportedSpans[0];
@@ -329,7 +359,16 @@ describe("Library/TelemetryClient", () => {
             const url = "http://bing.com/search?q=test";
             const commonProperties = { foo: "bar" };
             client.commonProperties = commonProperties;
-            client.trackRequest({ url: url, source: "source", name: name, duration: value, success: true, resultCode: 200, properties: properties, time: startTime });
+            client.trackRequest({
+                url: url,
+                source: "source",
+                name: name,
+                duration: value,
+                success: true,
+                resultCode: 200,
+                properties: properties,
+                time: startTime,
+            });
 
             assert.strictEqual(memoryExporter.exportedSpans.length, 1);
 
@@ -354,7 +393,16 @@ describe("Library/TelemetryClient", () => {
             const url = "http://bing.com/search?q=test";
             const sessionId = "abc";
             client.context.tags[client.context.keys.sessionId] = "abc";
-            client.trackRequest({ url: url, source: "source", name: name, duration: value, success: true, resultCode: 200, properties: properties, time: startTime });
+            client.trackRequest({
+                url: url,
+                source: "source",
+                name: name,
+                duration: value,
+                success: true,
+                resultCode: 200,
+                properties: properties,
+                time: startTime,
+            });
 
             assert.strictEqual(memoryExporter.exportedSpans.length, 1);
 
@@ -378,7 +426,16 @@ describe("Library/TelemetryClient", () => {
 
         it("should create span with correct properties", () => {
             const url = "http://bing.com/search?q=test";
-            client.trackRequest({ url: url, source: "source", name: name, duration: value, success: true, resultCode: 200, properties: properties, time: startTime });
+            client.trackRequest({
+                url: url,
+                source: "source",
+                name: name,
+                duration: value,
+                success: true,
+                resultCode: 200,
+                properties: properties,
+                time: startTime,
+            });
             assert.strictEqual(memoryExporter.exportedSpans.length, 1);
 
             const span = memoryExporter.exportedSpans[0];
@@ -396,12 +453,15 @@ describe("Library/TelemetryClient", () => {
                 tags: client.context.tags,
             });
 
-            assert.strictEqual(span.attributes.tags[client.context.keys.sessionId], undefined, "Session ID is not set by default");
+            assert.strictEqual(
+                span.attributes.tags[client.context.keys.sessionId],
+                undefined,
+                "Session ID is not set by default"
+            );
         });
     });
 
     describe("#flush()", () => {
-
         afterEach(() => {
             client.clearTelemetryProcessors();
             saveOnCrashStub.reset();
@@ -414,7 +474,9 @@ describe("Library/TelemetryClient", () => {
 
         it("(OpenTelemetry) should invoke forceFlush", () => {
             Provider.start();
-            const flushStub = sinon.stub(Provider["_instance"].activeSpanProcessor, "forceFlush").callsFake(() => {});
+            const flushStub = sinon
+                .stub(Provider["_instance"].activeSpanProcessor, "forceFlush")
+                .callsFake(() => {});
 
             client.flush();
             assert.strictEqual(flushStub.callCount, 1);
@@ -430,7 +492,7 @@ describe("Library/TelemetryClient", () => {
 
         it("should accept a callback", () => {
             triggerStub.reset();
-            var callback = sinon.spy();
+            const callback = sinon.spy();
             client.flush({ callback: callback });
             assert.strictEqual(triggerStub.firstCall.args[0], false);
             assert.strictEqual(triggerStub.firstCall.args[1], callback);
@@ -452,9 +514,7 @@ describe("Library/TelemetryClient", () => {
 
             assert.ok(saveOnCrashStub.calledOnce);
             saveOnCrashStub.restore();
-
         });
-
     });
 
     describe("#track()", () => {
@@ -468,35 +528,34 @@ describe("Library/TelemetryClient", () => {
             assert.ok(sendStub.calledOnce);
         });
 
-
         it("should send the envelope that was created", () => {
             sendStub.reset();
-            var createEnvelopeSpy = sinon.spy(EnvelopeFactory, "createEnvelope");
+            const createEnvelopeSpy = sinon.spy(EnvelopeFactory, "createEnvelope");
             trackStub.restore();
             client.track(testEventTelemetry, Contracts.TelemetryType.Event);
             trackStub = sinon.stub(client, "track");
 
-            var expected = createEnvelopeSpy.firstCall.returnValue;
-            var actual = sendStub.firstCall.args[0];
+            const expected = createEnvelopeSpy.firstCall.returnValue;
+            const actual = sendStub.firstCall.args[0];
             createEnvelopeSpy.restore();
 
             assert.deepEqual(actual, expected);
         });
 
         it("should use timestamp if it was set", () => {
-            var timestamp = new Date("Mon Aug 28 2017 11:44:17");
-            var createEnvelopeSpy = sinon.spy(EnvelopeFactory, "createEnvelope");
+            const timestamp = new Date("Mon Aug 28 2017 11:44:17");
+            const createEnvelopeSpy = sinon.spy(EnvelopeFactory, "createEnvelope");
             trackStub.restore();
             client.trackEvent({ name: "eventName", time: timestamp });
             trackStub = sinon.stub(client, "track");
-            var envelope = <Contracts.Envelope>createEnvelopeSpy.firstCall.returnValue;
+            const envelope = createEnvelopeSpy.firstCall.returnValue;
             createEnvelopeSpy.restore();
             assert.equal(envelope.time, timestamp.toISOString());
         });
 
         it("telemetry processor can change the envelope", () => {
             trackStub.restore();
-            var expectedName = "I was here";
+            const expectedName = "I was here";
 
             client.addTelemetryProcessor((env) => {
                 env.name = expectedName;
@@ -507,27 +566,35 @@ describe("Library/TelemetryClient", () => {
 
             assert.equal(sendStub.callCount, 1, "send called once");
 
-            var actualData = sendStub.firstCall.args[0] as Contracts.Envelope;
-            assert.equal(actualData.name, expectedName, "envelope name should be changed by the processor");
+            const actualData = sendStub.firstCall.args[0] as Contracts.Envelope;
+            assert.equal(
+                actualData.name,
+                expectedName,
+                "envelope name should be changed by the processor"
+            );
         });
 
         it("telemetry processor can access the context object", () => {
             trackStub.restore();
-            var expectedName = "I was here";
+            const expectedName = "I was here";
 
             client.addTelemetryProcessor((env, contextObjects) => {
                 env.name = contextObjects["name"];
                 return true;
             });
-            testEventTelemetry.contextObjects = { "name": expectedName };
+            testEventTelemetry.contextObjects = { name: expectedName };
 
             client.track(testEventTelemetry, Contracts.TelemetryType.Event);
             testEventTelemetry.contextObjects = undefined;
 
             assert.equal(sendStub.callCount, 1, "send called once");
 
-            var actualData = sendStub.firstCall.args[0] as Contracts.Envelope;
-            assert.equal(actualData.name, expectedName, "envelope name should be changed by the processor");
+            const actualData = sendStub.firstCall.args[0] as Contracts.Envelope;
+            assert.equal(
+                actualData.name,
+                expectedName,
+                "envelope name should be changed by the processor"
+            );
         });
 
         it("telemetry processors are executed in a right order", () => {
@@ -550,8 +617,12 @@ describe("Library/TelemetryClient", () => {
             client.track(testEventTelemetry, Contracts.TelemetryType.Event);
             assert.equal(sendStub.callCount, 1, "send called once");
 
-            var actualData = sendStub.firstCall.args[0] as Contracts.Envelope;
-            assert.equal(actualData.name, "First, Second, Third", "processors should executed in the right order");
+            const actualData = sendStub.firstCall.args[0] as Contracts.Envelope;
+            assert.equal(
+                actualData.name,
+                "First, Second, Third",
+                "processors should executed in the right order"
+            );
         });
 
         it("envelope rejected by the telemetry processor will not be sent", () => {
@@ -581,15 +652,19 @@ describe("Library/TelemetryClient", () => {
             client.track(testEventTelemetry, Contracts.TelemetryType.Event);
 
             assert.ok(sendStub.called, "send should be called despite telemetry processor failure");
-            var actualData = sendStub.firstCall.args[0] as Contracts.Envelope;
-            assert.equal(actualData.name, "more data", "more data is added as part of telemetry processor");
+            const actualData = sendStub.firstCall.args[0] as Contracts.Envelope;
+            assert.equal(
+                actualData.name,
+                "more data",
+                "more data is added as part of telemetry processor"
+            );
         });
     });
 
     describe("#addTelemetryProcessor()", () => {
         it("adds telemetry processor to the queue", () => {
             trackStub.restore();
-            var processorExecuted = false;
+            let processorExecuted = false;
 
             client.addTelemetryProcessor((env) => {
                 processorExecuted = true;
@@ -605,7 +680,7 @@ describe("Library/TelemetryClient", () => {
     describe("#clearTelemetryProcessors()", () => {
         it("removes all processors from the telemetry processors list", () => {
             trackStub.restore();
-            var processorExecuted = false;
+            let processorExecuted = false;
 
             client.addTelemetryProcessor((env) => {
                 processorExecuted = true;

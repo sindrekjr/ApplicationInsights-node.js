@@ -13,6 +13,6 @@ appInsightsLoader.setStatusLogger(new StatusLogger(new NoopLogger()));
 appInsightsLoader.setLogger(new DiagnosticLogger(new NoopLogger()));
 
 // Start the SDK
-var appInsights = appInsightsLoader.setupAndStart();
+const appInsights = appInsightsLoader.setupAndStart();
 
 export = appInsights;

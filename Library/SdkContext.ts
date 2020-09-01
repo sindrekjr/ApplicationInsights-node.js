@@ -6,16 +6,15 @@ import Contracts = require("../Declarations/Contracts");
 import Logging = require("./Logging");
 
 class Context {
-
     public keys: Contracts.ContextTagKeys;
-    public tags: { [key: string]: string};
-    public static DefaultRoleName:string = "Web";
-    public static appVersion: {[path: string]: string} = {};
+    public tags: { [key: string]: string };
+    public static DefaultRoleName: string = "Web";
+    public static appVersion: { [path: string]: string } = {};
     public static sdkVersion: string = null;
 
     constructor(packageJsonPath?: string) {
         this.keys = new Contracts.ContextTagKeys();
-        this.tags = <{ [key: string]: string}>{};
+        this.tags = <{ [key: string]: string }>{};
 
         this._loadApplicationContext();
         this._loadDeviceContext();
@@ -27,7 +26,7 @@ class Context {
         packageJsonPath = packageJsonPath || path.resolve(__dirname, "../../../../package.json");
         const packageJsonPathTsNode = path.resolve(__dirname, "../../../package.json"); // path to read from if using ts-node
 
-        let packageJson: { version: string; } | null = null;
+        let packageJson: { version: string } | null = null;
 
         if (!Context.appVersion[packageJsonPath]) {
             Context.appVersion[packageJsonPath] = "unknown";
@@ -36,7 +35,7 @@ class Context {
             } catch (_e) {
                 try {
                     packageJson = JSON.parse(fs.readFileSync(packageJsonPathTsNode, "utf8"));
-                } catch(exception) {
+                } catch (exception) {
                     Logging.info("unable to read app version:", exception);
                 }
             }
@@ -52,7 +51,7 @@ class Context {
     private _loadDeviceContext() {
         this.tags[this.keys.deviceId] = "";
         this.tags[this.keys.cloudRoleInstance] = os && os.hostname();
-        this.tags[this.keys.deviceOSVersion] = os && (os.type() + " " + os.release());
+        this.tags[this.keys.deviceOSVersion] = os && os.type() + " " + os.release();
         this.tags[this.keys.cloudRole] = Context.DefaultRoleName;
 
         // not yet supported tags
@@ -60,12 +59,12 @@ class Context {
         this.tags["ai.device.osPlatform"] = os && os.platform();
     }
 
-    private _loadInternalContext() {// note: this should return the sdk package.json
+    private _loadInternalContext() {
+        // note: this should return the sdk package.json
         const packageJsonPath = path.resolve(__dirname, "../../package.json");
         const packageJsonPathTsNode = path.resolve(__dirname, "../package.json");
 
-        let packageJson: { version: string; } | null = null;
-
+        let packageJson: { version: string } | null = null;
 
         if (!Context.sdkVersion) {
             Context.sdkVersion = "unknown";
@@ -73,7 +72,7 @@ class Context {
                 packageJson = JSON.parse(fs.readFileSync(packageJsonPath, "utf8"));
             } catch (_e) {
                 try {
-                    packageJson = JSON.parse(fs.readFileSync(packageJsonPathTsNode, "utf8"))
+                    packageJson = JSON.parse(fs.readFileSync(packageJsonPathTsNode, "utf8"));
                 } catch (exception) {
                     Logging.info("unable to read sdk version: ", exception);
                 }

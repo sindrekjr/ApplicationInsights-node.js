@@ -8,7 +8,7 @@ import * as DefaultTypes from "../../Bootstrap/Default";
 const appInsights = require("../../applicationinsights");
 
 class LoggerSpy implements DataModel.AgentLogger {
-    public logCount = 0
+    public logCount = 0;
     public errorCount = 0;
 
     public log() {
@@ -48,15 +48,15 @@ describe("#setupAndStart()", () => {
         assert.ok(instance1.defaultClient);
         const instance2 = Default.setupAndStart("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333");
         assert.deepEqual(instance1.defaultClient, instance2.defaultClient);
-        assert.deepEqual(instance1.defaultClient["_telemetryProcessors"].length, 2)
-        assert.deepEqual(instance2.defaultClient["_telemetryProcessors"].length, 2)
+        assert.deepEqual(instance1.defaultClient["_telemetryProcessors"].length, 2);
+        assert.deepEqual(instance2.defaultClient["_telemetryProcessors"].length, 2);
 
         // Cleanup
         alreadyExistsStub.restore();
         instance1.dispose();
         instance2.dispose();
         process.env.ApplicationInsightsAgent_EXTENSION_VERSION = origEnv;
-    })
+    });
 
     it("should setup and start the SDK", () => {
         // Setup env vars before requiring loader

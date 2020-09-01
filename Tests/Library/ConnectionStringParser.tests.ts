@@ -1,13 +1,12 @@
 import assert = require("assert");
 
-import sinon = require("sinon");
 import Constants = require("../../Declarations/Constants");
 import ConnectionStringParser = require("../../Library/ConnectionStringParser");
 
 describe("ConnectionStringParser", () => {
     describe("#parse()", () => {
         it("should parse all valid fields", () => {
-            const authorization = "ikey"
+            const authorization = "ikey";
             const instrumentationKey = "1aa11111-bbbb-1ccc-8ddd-eeeeffff3333";
             const ingestionEndpoint = "ingest";
             const liveEndpoint = "live";
@@ -22,7 +21,7 @@ describe("ConnectionStringParser", () => {
         });
 
         it("should ignore invalid fields", () => {
-            const authorization = "ikey"
+            const authorization = "ikey";
             const instrumentationKey = "1aa11111-bbbb-1ccc-8ddd-eeeeffff3333";
             const ingestionEndpoint = "ingest";
             const liveEndpoint = "live";
@@ -37,19 +36,21 @@ describe("ConnectionStringParser", () => {
         });
 
         const runTest = (options: {
-            connectionString: string,
-            expectedAuthorization?: string,
-            expectedInstrumentationKey?: string,
-            expectedBreezeEndpoint: string,
-            expectedLiveMetricsEndpoint: string,
+            connectionString: string;
+            expectedAuthorization?: string;
+            expectedInstrumentationKey?: string;
+            expectedBreezeEndpoint: string;
+            expectedLiveMetricsEndpoint: string;
         }) => {
             const result = ConnectionStringParser.parse(options.connectionString);
 
-            if (options.expectedAuthorization) assert.deepEqual(result.authorization, options.expectedAuthorization);
-            if (options.expectedInstrumentationKey) assert.deepEqual(result.instrumentationkey, options.expectedInstrumentationKey);
+            if (options.expectedAuthorization)
+                assert.deepEqual(result.authorization, options.expectedAuthorization);
+            if (options.expectedInstrumentationKey)
+                assert.deepEqual(result.instrumentationkey, options.expectedInstrumentationKey);
             assert.deepEqual(result.ingestionendpoint, options.expectedBreezeEndpoint);
             assert.deepEqual(result.liveendpoint, options.expectedLiveMetricsEndpoint);
-        }
+        };
 
         it("should use correct default endpoints", () => {
             runTest({
@@ -57,47 +58,52 @@ describe("ConnectionStringParser", () => {
                 expectedAuthorization: undefined,
                 expectedInstrumentationKey: "1aa11111-bbbb-1ccc-8ddd-eeeeffff3333",
                 expectedBreezeEndpoint: Constants.DEFAULT_BREEZE_ENDPOINT,
-                expectedLiveMetricsEndpoint: Constants.DEFAULT_LIVEMETRICS_ENDPOINT
+                expectedLiveMetricsEndpoint: Constants.DEFAULT_LIVEMETRICS_ENDPOINT,
             });
         });
 
         it("should use correct endpoints when using EndpointSuffix", () => {
             runTest({
-                connectionString: "InstrumentationKey=00000000-0000-0000-0000-000000000000;EndpointSuffix=ai.contoso.com",
+                connectionString:
+                    "InstrumentationKey=00000000-0000-0000-0000-000000000000;EndpointSuffix=ai.contoso.com",
                 expectedBreezeEndpoint: "https://dc.ai.contoso.com",
-                expectedLiveMetricsEndpoint: "https://live.ai.contoso.com"
+                expectedLiveMetricsEndpoint: "https://live.ai.contoso.com",
             });
         });
 
         it("should use correct endpoints when using EndpointSuffix with explicit override", () => {
             runTest({
-                connectionString: "InstrumentationKey=00000000-0000-0000-0000-000000000000;EndpointSuffix=ai.contoso.com;LiveEndpoint=https://custom.live.contoso.com:444",
+                connectionString:
+                    "InstrumentationKey=00000000-0000-0000-0000-000000000000;EndpointSuffix=ai.contoso.com;LiveEndpoint=https://custom.live.contoso.com:444",
                 expectedBreezeEndpoint: "https://dc.ai.contoso.com",
-                expectedLiveMetricsEndpoint: "https://custom.live.contoso.com:444"
+                expectedLiveMetricsEndpoint: "https://custom.live.contoso.com:444",
             });
         });
 
         it("should parse EndpointSuffix + Location", () => {
             runTest({
-                connectionString: "InstrumentationKey=00000000-0000-0000-0000-000000000000;EndpointSuffix=ai.contoso.com;Location=westus2",
+                connectionString:
+                    "InstrumentationKey=00000000-0000-0000-0000-000000000000;EndpointSuffix=ai.contoso.com;Location=westus2",
                 expectedBreezeEndpoint: "https://westus2.dc.ai.contoso.com",
-                expectedLiveMetricsEndpoint: "https://westus2.live.ai.contoso.com"
+                expectedLiveMetricsEndpoint: "https://westus2.live.ai.contoso.com",
             });
         });
 
         it("should parse EndpointSuffix + Location + Endpoint Override", () => {
             runTest({
-                connectionString: "InstrumentationKey=00000000-0000-0000-0000-000000000000;EndpointSuffix=ai.contoso.com;Location=westus2;LiveEndpoint=https://custom.contoso.com:444",
+                connectionString:
+                    "InstrumentationKey=00000000-0000-0000-0000-000000000000;EndpointSuffix=ai.contoso.com;Location=westus2;LiveEndpoint=https://custom.contoso.com:444",
                 expectedBreezeEndpoint: "https://westus2.dc.ai.contoso.com",
-                expectedLiveMetricsEndpoint: "https://custom.contoso.com:444"
+                expectedLiveMetricsEndpoint: "https://custom.contoso.com:444",
             });
         });
 
         it("should parse Endpoint Override", () => {
             runTest({
-                connectionString: "InstrumentationKey=00000000-0000-0000-0000-000000000000;LiveEndpoint=http://custom.live.endpoint.com:444",
+                connectionString:
+                    "InstrumentationKey=00000000-0000-0000-0000-000000000000;LiveEndpoint=http://custom.live.endpoint.com:444",
                 expectedBreezeEndpoint: Constants.DEFAULT_BREEZE_ENDPOINT,
-                expectedLiveMetricsEndpoint: "http://custom.live.endpoint.com:444"
+                expectedLiveMetricsEndpoint: "http://custom.live.endpoint.com:444",
             });
         });
     });

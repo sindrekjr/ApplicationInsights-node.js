@@ -1,4 +1,4 @@
-import { Telemetry }  from "./Telemetry";
+import { Telemetry } from "./Telemetry";
 
 /**
  * Telemetry encapsulating a custom metric, i.e. aggregated numeric values describing value, count, frequency and distribution of

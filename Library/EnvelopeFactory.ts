@@ -1,5 +1,5 @@
-import Contracts = require("../Declarations/Contracts")
-import Util = require("./Util")
+import Contracts = require("../Declarations/Contracts");
+import Util = require("./Util");
 import Config = require("./Config");
 import Context = require("./SdkContext");
 import * as opentelemetry from "@opentelemetry/api";
@@ -8,8 +8,6 @@ import * as opentelemetry from "@opentelemetry/api";
  * Manages the logic of creating envelopes from Telemetry objects
  */
 class EnvelopeFactory {
-
-
     /**
      * Creates envelope ready to be sent by Channel
      * @param telemetry Telemetry data
@@ -21,19 +19,20 @@ class EnvelopeFactory {
     public static createEnvelope(
         telemetry: Contracts.Telemetry,
         telemetryType: Contracts.TelemetryType,
-        commonProperties?: { [key: string]: string; },
+        commonProperties?: { [key: string]: string },
         context?: Context,
-        config?: Config): Contracts.Envelope {
-
-        var data = null;
-
+        config?: Config
+    ): Contracts.Envelope {
+        let data = null;
 
         switch (telemetryType) {
             case Contracts.TelemetryType.Trace:
                 data = EnvelopeFactory.createTraceData(<Contracts.TraceTelemetry>telemetry);
                 break;
             case Contracts.TelemetryType.Dependency:
-                data = EnvelopeFactory.createDependencyData(<Contracts.DependencyTelemetry>telemetry);
+                data = EnvelopeFactory.createDependencyData(
+                    <Contracts.DependencyTelemetry>telemetry
+                );
                 break;
             case Contracts.TelemetryType.Event:
                 data = EnvelopeFactory.createEventData(<Contracts.EventTelemetry>telemetry);
@@ -48,21 +47,24 @@ class EnvelopeFactory {
                 data = EnvelopeFactory.createMetricData(<Contracts.MetricTelemetry>telemetry);
                 break;
             case Contracts.TelemetryType.Availability:
-                data = EnvelopeFactory.createAvailabilityData(<Contracts.AvailabilityTelemetry>telemetry);
+                data = EnvelopeFactory.createAvailabilityData(
+                    <Contracts.AvailabilityTelemetry>telemetry
+                );
                 break;
             case Contracts.TelemetryType.PageView:
                 data = EnvelopeFactory.createPageViewData(<Contracts.PageViewTelemetry>telemetry);
                 break;
         }
 
-        if (commonProperties && Contracts.domainSupportsProperties(data.baseData)) { // Do instanceof check. TS will automatically cast and allow the properties property
+        if (commonProperties && Contracts.domainSupportsProperties(data.baseData)) {
+            // Do instanceof check. TS will automatically cast and allow the properties property
             if (data && data.baseData) {
                 // if no properties are specified just add the common ones
                 if (!data.baseData.properties) {
                     data.baseData.properties = commonProperties;
                 } else {
                     // otherwise, check each of the common ones
-                    for (var name in commonProperties) {
+                    for (const name in commonProperties) {
                         // only override if the property `name` has not been set on this item
                         if (!data.baseData.properties[name]) {
                             data.baseData.properties[name] = commonProperties[name];
@@ -75,8 +77,8 @@ class EnvelopeFactory {
             data.baseData.properties = Util.validateStringMap(data.baseData.properties);
         }
 
-        var iKey = config ? config.instrumentationKey || "" : "";
-        var envelope = new Contracts.Envelope();
+        const iKey = config ? config.instrumentationKey || "" : "";
+        const envelope = new Contracts.Envelope();
         envelope.data = data;
         envelope.iKey = iKey;
 
@@ -87,7 +89,7 @@ class EnvelopeFactory {
             "." +
             data.baseType.substr(0, data.baseType.length - 4);
         envelope.tags = this.getTags(context, telemetry.tagOverrides);
-        envelope.time = (new Date()).toISOString();
+        envelope.time = new Date().toISOString();
         envelope.ver = 1;
         envelope.sampleRate = config ? config.samplingPercentage : 100;
 
@@ -99,64 +101,74 @@ class EnvelopeFactory {
         return envelope;
     }
 
-    private static createTraceData(telemetry: Contracts.TraceTelemetry): Contracts.Data<Contracts.MessageData> {
-        var trace = new Contracts.MessageData();
+    private static createTraceData(
+        telemetry: Contracts.TraceTelemetry
+    ): Contracts.Data<Contracts.MessageData> {
+        const trace = new Contracts.MessageData();
         trace.message = telemetry.message;
         trace.properties = telemetry.properties;
-        if (!isNaN(telemetry.severity)) {
+        if (typeof telemetry.severity !== "undefined" && !isNaN(telemetry.severity)) {
             trace.severityLevel = telemetry.severity;
         } else {
             trace.severityLevel = Contracts.SeverityLevel.Information;
         }
 
-        var data = new Contracts.Data<Contracts.MessageData>();
+        const data = new Contracts.Data<Contracts.MessageData>();
         data.baseType = Contracts.telemetryTypeToBaseType(Contracts.TelemetryType.Trace);
         data.baseData = trace;
         return data;
     }
 
-    private static createDependencyData(telemetry: Contracts.DependencyTelemetry & Contracts.Identified): Contracts.Data<Contracts.RemoteDependencyData> {
-        var remoteDependency = new Contracts.RemoteDependencyData();
+    private static createDependencyData(
+        telemetry: Contracts.DependencyTelemetry & Contracts.Identified
+    ): Contracts.Data<Contracts.RemoteDependencyData> {
+        const remoteDependency = new Contracts.RemoteDependencyData();
         if (typeof telemetry.name === "string") {
-            remoteDependency.name = telemetry.name.length > 1024 ? telemetry.name.slice(0, 1021) + '...' : telemetry.name;
+            remoteDependency.name =
+                telemetry.name.length > 1024
+                    ? telemetry.name.slice(0, 1021) + "..."
+                    : telemetry.name;
         }
         remoteDependency.data = telemetry.data;
-        remoteDependency.target = telemetry.target;
+        remoteDependency.target = telemetry.target ?? "";
         remoteDependency.duration = Util.msToTimeSpan(telemetry.duration);
         remoteDependency.success = telemetry.success;
         remoteDependency.type = telemetry.dependencyTypeName;
         remoteDependency.properties = telemetry.properties;
-        remoteDependency.resultCode = (telemetry.resultCode ? telemetry.resultCode + '' : '');
+        remoteDependency.resultCode = telemetry.resultCode ? telemetry.resultCode + "" : "";
 
         if (telemetry.id) {
             remoteDependency.id = telemetry.id;
-        }
-        else {
+        } else {
             remoteDependency.id = Util.w3cTraceId();
         }
 
-        var data = new Contracts.Data<Contracts.RemoteDependencyData>();
+        const data = new Contracts.Data<Contracts.RemoteDependencyData>();
         data.baseType = Contracts.telemetryTypeToBaseType(Contracts.TelemetryType.Dependency);
         data.baseData = remoteDependency;
         return data;
     }
 
-    private static createEventData(telemetry: Contracts.EventTelemetry): Contracts.Data<Contracts.EventData> {
-        var event = new Contracts.EventData();
+    private static createEventData(
+        telemetry: Contracts.EventTelemetry
+    ): Contracts.Data<Contracts.EventData> {
+        const event = new Contracts.EventData();
         event.name = telemetry.name;
         event.properties = telemetry.properties;
         event.measurements = telemetry.measurements;
 
-        var data = new Contracts.Data<Contracts.EventData>();
+        const data = new Contracts.Data<Contracts.EventData>();
         data.baseType = Contracts.telemetryTypeToBaseType(Contracts.TelemetryType.Event);
         data.baseData = event;
         return data;
     }
 
-    private static createExceptionData(telemetry: Contracts.ExceptionTelemetry): Contracts.Data<Contracts.ExceptionData> {
-        var exception = new Contracts.ExceptionData();
+    private static createExceptionData(
+        telemetry: Contracts.ExceptionTelemetry
+    ): Contracts.Data<Contracts.ExceptionData> {
+        const exception = new Contracts.ExceptionData();
         exception.properties = telemetry.properties;
-        if (!isNaN(telemetry.severity)) {
+        if (typeof telemetry.severity !== "undefined" && !isNaN(telemetry.severity)) {
             exception.severityLevel = telemetry.severity;
         } else {
             exception.severityLevel = Contracts.SeverityLevel.Error;
@@ -164,69 +176,83 @@ class EnvelopeFactory {
         exception.measurements = telemetry.measurements;
         exception.exceptions = [];
 
-        var stack = telemetry.exception["stack"];
-        var exceptionDetails = new Contracts.ExceptionDetails();
+        const stack = telemetry.exception["stack"];
+        const exceptionDetails = new Contracts.ExceptionDetails();
         exceptionDetails.message = telemetry.exception.message;
         exceptionDetails.typeName = telemetry.exception.name;
         exceptionDetails.parsedStack = this.parseStack(stack);
-        exceptionDetails.hasFullStack = Util.isArray(exceptionDetails.parsedStack) && exceptionDetails.parsedStack.length > 0;
+        exceptionDetails.hasFullStack =
+            Util.isArray(exceptionDetails.parsedStack) && exceptionDetails.parsedStack.length > 0;
         exception.exceptions.push(exceptionDetails);
 
-        var data = new Contracts.Data<Contracts.ExceptionData>();
+        const data = new Contracts.Data<Contracts.ExceptionData>();
         data.baseType = Contracts.telemetryTypeToBaseType(Contracts.TelemetryType.Exception);
         data.baseData = exception;
         return data;
     }
 
-    private static createRequestData(telemetry: Contracts.RequestTelemetry & Contracts.Identified): Contracts.Data<Contracts.RequestData> {
-        var requestData = new Contracts.RequestData();
+    private static createRequestData(
+        telemetry: Contracts.RequestTelemetry & Contracts.Identified
+    ): Contracts.Data<Contracts.RequestData> {
+        const requestData = new Contracts.RequestData();
         if (telemetry.id) {
             requestData.id = telemetry.id;
-        }
-        else {
+        } else {
             requestData.id = Util.w3cTraceId();
         }
         requestData.name = telemetry.name;
         requestData.url = telemetry.url;
-        requestData.source = telemetry.source;
+        requestData.source = telemetry.source ?? "";
         requestData.duration = Util.msToTimeSpan(telemetry.duration);
-        requestData.responseCode = (telemetry.resultCode ? telemetry.resultCode + '' : '');
-        requestData.success = telemetry.success
+        requestData.responseCode = telemetry.resultCode ? telemetry.resultCode + "" : "";
+        requestData.success = telemetry.success;
         requestData.properties = telemetry.properties;
 
-        var data = new Contracts.Data<Contracts.RequestData>();
+        const data = new Contracts.Data<Contracts.RequestData>();
         data.baseType = Contracts.telemetryTypeToBaseType(Contracts.TelemetryType.Request);
         data.baseData = requestData;
         return data;
     }
 
-    private static createMetricData(telemetry: Contracts.MetricTelemetry): Contracts.Data<Contracts.MetricData> {
-        var metrics = new Contracts.MetricData(); // todo: enable client-batching of these
+    private static createMetricData(
+        telemetry: Contracts.MetricTelemetry
+    ): Contracts.Data<Contracts.MetricData> {
+        const metrics = new Contracts.MetricData(); // todo: enable client-batching of these
         metrics.metrics = [];
 
-        var metric = new Contracts.DataPoint();
-        metric.count = !isNaN(telemetry.count) ? telemetry.count : 1;
+        const metric = new Contracts.DataPoint();
+        metric.count =
+            typeof telemetry.count !== "undefined" && !isNaN(telemetry.count) ? telemetry.count : 1;
         metric.kind = Contracts.DataPointType.Aggregation;
-        metric.max = !isNaN(telemetry.max) ? telemetry.max : telemetry.value;
-        metric.min = !isNaN(telemetry.min) ? telemetry.min : telemetry.value;
+        metric.max =
+            typeof telemetry.max !== "undefined" && !isNaN(telemetry.max)
+                ? telemetry.max
+                : telemetry.value;
+        metric.min =
+            typeof telemetry.min !== "undefined" && !isNaN(telemetry.min)
+                ? telemetry.min
+                : telemetry.value;
         metric.name = telemetry.name;
-        metric.stdDev = !isNaN(telemetry.stdDev) ? telemetry.stdDev : 0;
+        metric.stdDev =
+            typeof telemetry.stdDev !== "undefined" && !isNaN(telemetry.stdDev)
+                ? telemetry.stdDev
+                : 0;
         metric.value = telemetry.value;
 
         metrics.metrics.push(metric);
 
         metrics.properties = telemetry.properties;
 
-        var data = new Contracts.Data<Contracts.MetricData>();
+        const data = new Contracts.Data<Contracts.MetricData>();
         data.baseType = Contracts.telemetryTypeToBaseType(Contracts.TelemetryType.Metric);
         data.baseData = metrics;
         return data;
     }
 
     private static createAvailabilityData(
-        telemetry: Contracts.AvailabilityTelemetry & Contracts.Identified,
+        telemetry: Contracts.AvailabilityTelemetry & Contracts.Identified
     ): Contracts.Data<Contracts.AvailabilityData> {
-        let availabilityData = new Contracts.AvailabilityData();
+        const availabilityData = new Contracts.AvailabilityData();
 
         if (telemetry.id) {
             availabilityData.id = telemetry.id;
@@ -241,7 +267,7 @@ class EnvelopeFactory {
         availabilityData.measurements = telemetry.measurements;
         availabilityData.properties = telemetry.properties;
 
-        let data = new Contracts.Data<Contracts.AvailabilityData>();
+        const data = new Contracts.Data<Contracts.AvailabilityData>();
         data.baseType = Contracts.telemetryTypeToBaseType(Contracts.TelemetryType.Availability);
         data.baseData = availabilityData;
 
@@ -249,69 +275,70 @@ class EnvelopeFactory {
     }
 
     private static createPageViewData(
-        telemetry: Contracts.PageViewTelemetry & Contracts.Identified,
+        telemetry: Contracts.PageViewTelemetry & Contracts.Identified
     ): Contracts.Data<Contracts.PageViewData> {
-        let pageViewData = new Contracts.PageViewData();
+        const pageViewData = new Contracts.PageViewData();
 
-        pageViewData.name = telemetry.name;
-        pageViewData.duration = Util.msToTimeSpan(telemetry.duration);
-        pageViewData.url = telemetry.url;
+        pageViewData.name = telemetry.name ?? "";
+        pageViewData.duration = Util.msToTimeSpan(telemetry.duration ?? 0);
+        pageViewData.url = telemetry.url ?? "";
         pageViewData.measurements = telemetry.measurements;
         pageViewData.properties = telemetry.properties;
 
-        let data = new Contracts.Data<Contracts.PageViewData>();
+        const data = new Contracts.Data<Contracts.PageViewData>();
         data.baseType = Contracts.telemetryTypeToBaseType(Contracts.TelemetryType.PageView);
         data.baseData = pageViewData;
 
         return data;
     }
 
-    private static getTags(context: Context, tagOverrides?: { [key: string]: string; }) {
-        var correlationContext = opentelemetry.trace
-            .getTracer('applicationinsights')
+    private static getTags(context?: Context, tagOverrides?: { [key: string]: string }) {
+        const correlationContext = opentelemetry.trace
+            .getTracer("applicationinsights")
             .getCurrentSpan()
             ?.context();
 
         // Make a copy of context tags so we don't alter the actual object
         // Also perform tag overriding
-        var newTags = <{ [key: string]: string }>{};
+        const newTags = <{ [key: string]: string }>{};
 
         if (context && context.tags) {
-            for (var key in context.tags) {
+            for (const key in context.tags) {
                 newTags[key] = context.tags[key];
             }
         }
         if (tagOverrides) {
-            for (var key in tagOverrides) {
+            for (const key in tagOverrides) {
                 newTags[key] = tagOverrides[key];
             }
         }
 
         // Fill in internally-populated values if not already set
-        if (correlationContext) {
-            newTags[context.keys.operationId] = newTags[context.keys.operationId] || correlationContext.traceId;
+        if (correlationContext && context) {
+            newTags[context.keys.operationId] =
+                newTags[context.keys.operationId] || correlationContext.traceId;
 
-            newTags[context.keys.operationName] = newTags[context.keys.operationName] || correlationContext.traceId;
+            newTags[context.keys.operationName] =
+                newTags[context.keys.operationName] || correlationContext.traceId;
 
-            newTags[context.keys.operationParentId] = newTags[context.keys.operationParentId] || correlationContext.spanId;
+            newTags[context.keys.operationParentId] =
+                newTags[context.keys.operationParentId] || correlationContext.spanId;
         }
 
         return newTags;
     }
 
-
     private static parseStack(stack: any): _StackFrame[] {
-        var parsedStack: _StackFrame[] = undefined;
+        const parsedStack: _StackFrame[] = [];
         if (typeof stack === "string") {
-            var frames = stack.split("\n");
-            parsedStack = [];
-            var level = 0;
+            const frames = stack.split("\n");
+            let level = 0;
 
-            var totalSizeInBytes = 0;
-            for (var i = 0; i <= frames.length; i++) {
-                var frame = frames[i];
+            let totalSizeInBytes = 0;
+            for (let i = 0; i <= frames.length; i++) {
+                const frame = frames[i];
                 if (_StackFrame.regex.test(frame)) {
-                    var parsedFrame = new _StackFrame(frames[i], level++);
+                    const parsedFrame = new _StackFrame(frames[i], level++);
                     totalSizeInBytes += parsedFrame.sizeInBytes;
                     parsedStack.push(parsedFrame);
                 }
@@ -319,24 +346,23 @@ class EnvelopeFactory {
 
             // DP Constraint - exception parsed stack must be < 32KB
             // remove frames from the middle to meet the threshold
-            var exceptionParsedStackThreshold = 32 * 1024;
+            const exceptionParsedStackThreshold = 32 * 1024;
             if (totalSizeInBytes > exceptionParsedStackThreshold) {
-                var left = 0;
-                var right = parsedStack.length - 1;
-                var size = 0;
-                var acceptedLeft = left;
-                var acceptedRight = right;
+                let left = 0;
+                let right = parsedStack.length - 1;
+                let size = 0;
+                let acceptedLeft = left;
+                let acceptedRight = right;
 
                 while (left < right) {
                     // check size
-                    var lSize = parsedStack[left].sizeInBytes;
-                    var rSize = parsedStack[right].sizeInBytes;
+                    const lSize = parsedStack[left].sizeInBytes;
+                    const rSize = parsedStack[right].sizeInBytes;
                     size += lSize + rSize;
 
                     if (size > exceptionParsedStackThreshold) {
-
                         // remove extra frames from the middle
-                        var howMany = acceptedRight - acceptedLeft + 1;
+                        const howMany = acceptedRight - acceptedLeft + 1;
                         parsedStack.splice(acceptedLeft, howMany);
                         break;
                     }
@@ -353,11 +379,9 @@ class EnvelopeFactory {
 
         return parsedStack;
     }
-
 }
 
 class _StackFrame {
-
     // regex to match stack frames from ie/chrome/ff
     // methodName=$2, fileName=$4, lineNo=$5, column=$6
     public static regex = /^([\s]+at)?(.*?)(\@|\s\(|\s)([^\(\@\n]+):([0-9]+):([0-9]+)(\)?)$/;
@@ -373,7 +397,7 @@ class _StackFrame {
         this.level = level;
         this.method = "<no_method>";
         this.assembly = Util.trim(frame);
-        var matches = frame.match(_StackFrame.regex);
+        const matches = new RegExp(_StackFrame.regex).exec(frame);
         if (matches && matches.length >= 5) {
             this.method = Util.trim(matches[2]) || this.method;
             this.fileName = Util.trim(matches[4]) || "<no_filename>";

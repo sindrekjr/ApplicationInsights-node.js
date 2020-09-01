@@ -9,6 +9,6 @@
  */
 const getTransmissionTime = (): number => {
     return (Date.now() + 62135596800000) * 10000;
-}
+};
 
-export = {getTransmissionTime};
+export = { getTransmissionTime };

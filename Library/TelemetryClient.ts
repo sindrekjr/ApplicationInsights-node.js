@@ -1,4 +1,4 @@
-import Provider from './Provider';
+import Provider from "./Provider";
 import url = require("url");
 
 import Config = require("./Config");
@@ -12,21 +12,23 @@ import Logging = require("./Logging");
 import FlushOptions = require("./FlushOptions");
 import EnvelopeFactory = require("./EnvelopeFactory");
 import QuickPulseStateManager = require("./QuickPulseStateManager");
-import * as opentelemetry from '@opentelemetry/api';
-import * as tracing from '@opentelemetry/tracing';
-import { AzureMonitorTraceExporter } from '@azure/monitor-opentelemetry-exporter';
-import * as conventions from '@opentelemetry/semantic-conventions';
+import * as opentelemetry from "@opentelemetry/api";
+import * as tracing from "@opentelemetry/tracing";
+import { AzureMonitorTraceExporter } from "@azure/monitor-opentelemetry-exporter";
+import * as conventions from "@opentelemetry/semantic-conventions";
 
 /**
  * Application Insights telemetry client provides interface to track telemetry items, register telemetry initializers and
  * and manually trigger immediate sending (flushing)
  */
 class TelemetryClient {
-    private _telemetryProcessors: { (envelope: Contracts.Envelope, contextObjects: { [name: string]: any; }): boolean; }[] = [];
+    private _telemetryProcessors: {
+        (envelope: Contracts.Envelope, contextObjects: { [name: string]: any }): boolean;
+    }[] = [];
 
     public config: Config;
     public context: Context;
-    public commonProperties: { [key: string]: string; };
+    public commonProperties: { [key: string]: string };
     public channel: Channel;
     public quickPulseClient: QuickPulseStateManager;
 
@@ -37,13 +39,18 @@ class TelemetryClient {
      * @param setupString the Connection String or Instrumentation Key to use (read from environment variable if not specified)
      */
     constructor(setupString?: string) {
-        var config = new Config(setupString);
+        const config = new Config(setupString);
         this.config = config;
         this.context = new Context();
         this.commonProperties = {};
 
-        var sender = new Sender(this.config);
-        this.channel = new Channel(() => config.disableAppInsights, () => config.maxBatchSize, () => config.maxBatchIntervalMs, sender);
+        const sender = new Sender(this.config);
+        this.channel = new Channel(
+            () => config.disableAppInsights,
+            () => config.maxBatchSize,
+            () => config.maxBatchIntervalMs,
+            sender
+        );
     }
 
     public setupSpanExporter() {
@@ -54,15 +61,18 @@ class TelemetryClient {
                         connectionString: this.config.connectionString,
                         instrumentationKey: this.config.instrumentationKey,
                         logger: Provider.instance.logger,
-                    }), {
+                    }),
+                    {
                         bufferTimeout: this.config.maxBatchIntervalMs,
                         bufferSize: this.config.maxBatchSize,
                     }
-                ),
+                )
             );
             TelemetryClient._azureExporterSetup = true;
         } else {
-            Logging.warn("TelemetryClient.setupSpanExporter() was called multiple times. Ignoring this call");
+            Logging.warn(
+                "TelemetryClient.setupSpanExporter() was called multiple times. Ignoring this call"
+            );
         }
     }
 
@@ -140,7 +150,9 @@ class TelemetryClient {
             },
         });
         span.setStatus({
-            code: telemetry.success ? opentelemetry.CanonicalCode.OK : opentelemetry.CanonicalCode.UNKNOWN,
+            code: telemetry.success
+                ? opentelemetry.CanonicalCode.OK
+                : opentelemetry.CanonicalCode.UNKNOWN,
         });
 
         span.end(startTime + telemetry.duration);
@@ -153,7 +165,6 @@ class TelemetryClient {
      * @param telemetry      Object encapsulating tracking option
      * */
     public trackDependency(telemetry: Contracts.DependencyTelemetry & Contracts.Identified) {
-
         if (telemetry && !telemetry.target && telemetry.data) {
             // url.parse().host returns null for non-urls,
             // making this essentially a no-op in those cases
@@ -174,7 +185,9 @@ class TelemetryClient {
             },
         });
         span.setStatus({
-            code: telemetry.success ? opentelemetry.CanonicalCode.OK : opentelemetry.CanonicalCode.UNKNOWN,
+            code: telemetry.success
+                ? opentelemetry.CanonicalCode.OK
+                : opentelemetry.CanonicalCode.UNKNOWN,
         });
 
         span.end(startTime + telemetry.duration);
@@ -188,7 +201,8 @@ class TelemetryClient {
         Provider.flush();
         this.channel.triggerSend(
             options ? !!options.isAppCrashing : false,
-            options ? options.callback : undefined);
+            options ? options.callback : undefined
+        );
     }
 
     /**
@@ -198,28 +212,38 @@ class TelemetryClient {
      */
     public track(telemetry: Contracts.Telemetry, telemetryType: Contracts.TelemetryType) {
         if (telemetry && Contracts.telemetryTypeToBaseType(telemetryType)) {
-            var envelope = EnvelopeFactory.createEnvelope(telemetry, telemetryType, this.commonProperties, this.context, this.config);
+            const envelope = EnvelopeFactory.createEnvelope(
+                telemetry,
+                telemetryType,
+                this.commonProperties,
+                this.context,
+                this.config
+            );
 
             // Set time on the envelope if it was set on the telemetry item
             if (telemetry.time) {
                 envelope.time = telemetry.time.toISOString();
             }
 
-            var accepted = this.runTelemetryProcessors(envelope, telemetry.contextObjects);
+            let accepted = this.runTelemetryProcessors(envelope, telemetry.contextObjects);
 
             // Ideally we would have a central place for "internal" telemetry processors and users can configure which ones are in use.
             // This will do for now. Otherwise clearTelemetryProcessors() would be problematic.
-            accepted = accepted && TelemetryProcessors.samplingTelemetryProcessor(envelope, {
-                correlationContext: Provider.tracer?.getCurrentSpan()?.context(),
-            });
+            accepted =
+                accepted &&
+                TelemetryProcessors.samplingTelemetryProcessor(envelope, {
+                    correlationContext: Provider.tracer?.getCurrentSpan()?.context(),
+                });
 
             if (accepted) {
-                TelemetryProcessors.performanceMetricsTelemetryProcessor(envelope, this.quickPulseClient);
+                TelemetryProcessors.performanceMetricsTelemetryProcessor(
+                    envelope,
+                    this.quickPulseClient
+                );
                 this.channel.send(envelope);
             }
-        }
-        else {
-            Logging.warn("track() requires telemetry object and telemetryType to be specified.")
+        } else {
+            Logging.warn("track() requires telemetry object and telemetryType to be specified.");
         }
     }
 
@@ -229,7 +253,12 @@ class TelemetryClient {
      *
      * @param telemetryProcessor function, takes Envelope, and optional context object and returns boolean
      */
-    public addTelemetryProcessor(telemetryProcessor: (envelope: Contracts.Envelope, contextObjects?: { [name: string]: any; }) => boolean) {
+    public addTelemetryProcessor(
+        telemetryProcessor: (
+            envelope: Contracts.Envelope,
+            contextObjects?: { [name: string]: any }
+        ) => boolean
+    ) {
         this._telemetryProcessors.push(telemetryProcessor);
     }
 
@@ -240,30 +269,36 @@ class TelemetryClient {
         this._telemetryProcessors = [];
     }
 
-    private runTelemetryProcessors(envelope: Contracts.Envelope, contextObjects: { [name: string]: any; }): boolean {
-        var accepted = true;
-        var telemetryProcessorsCount = this._telemetryProcessors.length;
+    private runTelemetryProcessors(
+        envelope: Contracts.Envelope,
+        contextObjects: { [name: string]: any }
+    ): boolean {
+        let accepted = true;
+        const telemetryProcessorsCount = this._telemetryProcessors.length;
 
         if (telemetryProcessorsCount === 0) {
             return accepted;
         }
 
         contextObjects = contextObjects || {};
-        contextObjects['correlationContext'] = Provider.tracer?.getCurrentSpan()?.context();
+        contextObjects["correlationContext"] = Provider.tracer?.getCurrentSpan()?.context();
 
-        for (var i = 0; i < telemetryProcessorsCount; ++i) {
+        for (let i = 0; i < telemetryProcessorsCount; ++i) {
             try {
-                var processor = this._telemetryProcessors[i];
+                const processor = this._telemetryProcessors[i];
                 if (processor) {
                     if (processor.apply(null, [envelope, contextObjects]) === false) {
                         accepted = false;
                         break;
                     }
                 }
-
             } catch (error) {
                 accepted = true;
-                Logging.warn("One of telemetry processors failed, telemetry item will be sent.", error, envelope);
+                Logging.warn(
+                    "One of telemetry processors failed, telemetry item will be sent.",
+                    error,
+                    envelope
+                );
             }
         }
 

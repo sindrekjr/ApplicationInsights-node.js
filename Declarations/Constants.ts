@@ -1,4 +1,4 @@
-import Contracts = require("./Contracts")
+import Contracts = require("./Contracts");
 
 export const DEFAULT_BREEZE_ENDPOINT = "https://dc.services.visualstudio.com";
 export const DEFAULT_LIVEMETRICS_ENDPOINT = "https://rt.services.visualstudio.com";
@@ -6,43 +6,43 @@ export const DEFAULT_LIVEMETRICS_HOST = "rt.services.visualstudio.com";
 
 export enum QuickPulseCounter {
     // Memory
-    COMMITTED_BYTES= "\\Memory\\Committed Bytes",
+    COMMITTED_BYTES = "\\Memory\\Committed Bytes",
 
     // CPU
-    PROCESSOR_TIME= "\\Processor(_Total)\\% Processor Time",
+    PROCESSOR_TIME = "\\Processor(_Total)\\% Processor Time",
 
     // Request
-    REQUEST_RATE= "\\ApplicationInsights\\Requests\/Sec",
-    REQUEST_FAILURE_RATE= "\\ApplicationInsights\\Requests Failed\/Sec",
-    REQUEST_DURATION= "\\ApplicationInsights\\Request Duration",
+    REQUEST_RATE = "\\ApplicationInsights\\Requests/Sec",
+    REQUEST_FAILURE_RATE = "\\ApplicationInsights\\Requests Failed/Sec",
+    REQUEST_DURATION = "\\ApplicationInsights\\Request Duration",
 
     // Dependency
-    DEPENDENCY_RATE= "\\ApplicationInsights\\Dependency Calls\/Sec",
-    DEPENDENCY_FAILURE_RATE= "\\ApplicationInsights\\Dependency Calls Failed\/Sec",
-    DEPENDENCY_DURATION= "\\ApplicationInsights\\Dependency Call Duration",
+    DEPENDENCY_RATE = "\\ApplicationInsights\\Dependency Calls/Sec",
+    DEPENDENCY_FAILURE_RATE = "\\ApplicationInsights\\Dependency Calls Failed/Sec",
+    DEPENDENCY_DURATION = "\\ApplicationInsights\\Dependency Call Duration",
 
     // Exception
-    EXCEPTION_RATE= "\\ApplicationInsights\\Exceptions\/Sec"
+    EXCEPTION_RATE = "\\ApplicationInsights\\Exceptions/Sec",
 }
 
 export enum PerformanceCounter {
     // Memory
-    PRIVATE_BYTES= "\\Process(??APP_WIN32_PROC??)\\Private Bytes",
-    AVAILABLE_BYTES= "\\Memory\\Available Bytes",
+    PRIVATE_BYTES = "\\Process(??APP_WIN32_PROC??)\\Private Bytes",
+    AVAILABLE_BYTES = "\\Memory\\Available Bytes",
 
     // CPU
-    PROCESSOR_TIME= "\\Processor(_Total)\\% Processor Time",
-    PROCESS_TIME= "\\Process(??APP_WIN32_PROC??)\\% Processor Time",
+    PROCESSOR_TIME = "\\Processor(_Total)\\% Processor Time",
+    PROCESS_TIME = "\\Process(??APP_WIN32_PROC??)\\% Processor Time",
 
     // Requests
-    REQUEST_RATE= "\\ASP.NET Applications(??APP_W3SVC_PROC??)\\Requests/Sec",
-    REQUEST_DURATION= "\\ASP.NET Applications(??APP_W3SVC_PROC??)\\Request Execution Time"
-};
+    REQUEST_RATE = "\\ASP.NET Applications(??APP_W3SVC_PROC??)\\Requests/Sec",
+    REQUEST_DURATION = "\\ASP.NET Applications(??APP_W3SVC_PROC??)\\Request Execution Time",
+}
 
 /**
  * Map a PerformanceCounter/QuickPulseCounter to a QuickPulseCounter. If no mapping exists, mapping is *undefined*
  */
-export const PerformanceToQuickPulseCounter: {[key: string]: QuickPulseCounter} = {
+export const PerformanceToQuickPulseCounter: { [key: string]: QuickPulseCounter } = {
     [PerformanceCounter.PROCESSOR_TIME]: QuickPulseCounter.PROCESSOR_TIME,
     [PerformanceCounter.REQUEST_RATE]: QuickPulseCounter.REQUEST_RATE,
     [PerformanceCounter.REQUEST_DURATION]: QuickPulseCounter.REQUEST_DURATION,
@@ -53,12 +53,20 @@ export const PerformanceToQuickPulseCounter: {[key: string]: QuickPulseCounter} 
     [QuickPulseCounter.DEPENDENCY_RATE]: QuickPulseCounter.DEPENDENCY_RATE,
     [QuickPulseCounter.DEPENDENCY_FAILURE_RATE]: QuickPulseCounter.DEPENDENCY_FAILURE_RATE,
     [QuickPulseCounter.DEPENDENCY_DURATION]: QuickPulseCounter.DEPENDENCY_DURATION,
-    [QuickPulseCounter.EXCEPTION_RATE]: QuickPulseCounter.EXCEPTION_RATE
+    [QuickPulseCounter.EXCEPTION_RATE]: QuickPulseCounter.EXCEPTION_RATE,
 };
 
 // Note: Explicitly define these types instead of using enum due to
 // potential 'export enum' issues with typescript < 2.0.
-export type QuickPulseDocumentType = "Event" | "Exception" | "Trace" | "Metric" | "Request" | "RemoteDependency" | "Availability" | "PageView";
+export type QuickPulseDocumentType =
+    | "Event"
+    | "Exception"
+    | "Trace"
+    | "Metric"
+    | "Request"
+    | "RemoteDependency"
+    | "Availability"
+    | "PageView";
 export type QuickPulseType =
     | "EventTelemetryDocument"
     | "ExceptionTelemetryDocument"
@@ -69,7 +77,9 @@ export type QuickPulseType =
     | "AvailabilityTelemetryDocument"
     | "PageViewTelemetryDocument";
 
-export const QuickPulseDocumentType: {[key in Contracts.TelemetryTypeKeys]: QuickPulseDocumentType} = {
+export const QuickPulseDocumentType: {
+    [key in Contracts.TelemetryTypeKeys]: QuickPulseDocumentType;
+} = {
     Event: "Event",
     Exception: "Exception",
     Trace: "Trace",
@@ -80,7 +90,7 @@ export const QuickPulseDocumentType: {[key in Contracts.TelemetryTypeKeys]: Quic
     PageView: "PageView",
 };
 
-export const QuickPulseType: {[key in Contracts.TelemetryTypeKeys]: QuickPulseType} = {
+export const QuickPulseType: { [key in Contracts.TelemetryTypeKeys]: QuickPulseType } = {
     Event: "EventTelemetryDocument",
     Exception: "ExceptionTelemetryDocument",
     Trace: "TraceTelemetryDocument",
@@ -91,7 +101,9 @@ export const QuickPulseType: {[key in Contracts.TelemetryTypeKeys]: QuickPulseTy
     PageView: "PageViewTelemetryDocument",
 };
 
-export const TelemetryTypeStringToQuickPulseType: {[key in Contracts.TelemetryTypeValues]: QuickPulseType} = {
+export const TelemetryTypeStringToQuickPulseType: {
+    [key in Contracts.TelemetryTypeValues]: QuickPulseType;
+} = {
     EventData: QuickPulseType.Event,
     ExceptionData: QuickPulseType.Exception,
     MessageData: QuickPulseType.Trace,
@@ -99,10 +111,12 @@ export const TelemetryTypeStringToQuickPulseType: {[key in Contracts.TelemetryTy
     RequestData: QuickPulseType.Request,
     RemoteDependencyData: QuickPulseType.Dependency,
     AvailabilityData: QuickPulseType.Availability,
-    PageViewData: QuickPulseType.PageView
+    PageViewData: QuickPulseType.PageView,
 };
 
-export const TelemetryTypeStringToQuickPulseDocumentType: {[key in Contracts.TelemetryTypeValues]: QuickPulseDocumentType} = {
+export const TelemetryTypeStringToQuickPulseDocumentType: {
+    [key in Contracts.TelemetryTypeValues]: QuickPulseDocumentType;
+} = {
     EventData: QuickPulseDocumentType.Event,
     ExceptionData: QuickPulseDocumentType.Exception,
     MessageData: QuickPulseDocumentType.Trace,
@@ -110,7 +124,7 @@ export const TelemetryTypeStringToQuickPulseDocumentType: {[key in Contracts.Tel
     RequestData: QuickPulseDocumentType.Request,
     RemoteDependencyData: QuickPulseDocumentType.Dependency,
     AvailabilityData: QuickPulseDocumentType.Availability,
-    PageViewData: QuickPulseDocumentType.PageView
+    PageViewData: QuickPulseDocumentType.PageView,
 };
 
 // OpenTelemetry Span Attributes
@@ -132,6 +146,6 @@ export const DependencyTypeName = {
     Grpc: "GRPC",
     Http: "HTTP",
     InProc: "InProc",
-}
+};
 
 export const HeartBeatMetricName = "HeartBeat";

@@ -25,3 +25,5 @@ Schema
 typings
 tsconfig.json
 typings.json
+.eslint*
+.prettier*

@@ -6,8 +6,8 @@ export interface AgentLogger {
 export const enum SeverityLevel {
     ERROR = "ERROR",
     WARN = "WARN",
-    INFO = "INFO"
-};
+    INFO = "INFO",
+}
 
 export interface DiagnosticLog {
     /**
@@ -33,7 +33,7 @@ export interface DiagnosticLog {
     /**
      * Exception (as string)
      */
-    exception?: string
+    exception?: string;
 
     /**
      * Any custom data related to the error/application/operation. Each field should have a string value

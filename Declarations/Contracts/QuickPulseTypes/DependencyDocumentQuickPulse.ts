@@ -5,7 +5,7 @@ export interface DependencyDocumentQuickPulse extends DocumentQuickPulse {
     Target: string;
     Success?: boolean;
     Duration: string;
-    ResultCode: string,
+    ResultCode: string;
     CommandName: string;
     DependencyTypeName: string;
     OperationName: string;

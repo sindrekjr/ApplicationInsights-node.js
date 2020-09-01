@@ -25,9 +25,9 @@ class QuickPulseStateManager {
     private _lastSuccessTime: number = Date.now();
     private _lastSendSucceeded: boolean = true;
     private _handle: NodeJS.Timer;
-    private _metrics: {[name: string]: Contracts.MetricQuickPulse} = {};
+    private _metrics: { [name: string]: Contracts.MetricQuickPulse } = {};
     private _documents: Contracts.DocumentQuickPulse[] = [];
-    private _collectors: {enable: (enable: boolean) => void}[] = [];
+    private _collectors: { enable: (enable: boolean) => void }[] = [];
 
     constructor(iKey?: string, context?: Context) {
         this.config = new Config(iKey);
@@ -82,8 +82,8 @@ class QuickPulseStateManager {
      * @param enable
      */
     private enableCollectors(enable: boolean): void {
-        this._collectors.forEach(collector => {
-            collector.enable(enable)
+        this._collectors.forEach((collector) => {
+            collector.enable(enable);
         });
     }
 
@@ -92,13 +92,15 @@ class QuickPulseStateManager {
      * @param telemetry
      */
     private _addMetric(telemetry: Contracts.MetricTelemetry) {
-        const {value} = telemetry;
+        const { value } = telemetry;
         const count = telemetry.count || 1;
 
-        let name = Constants.PerformanceToQuickPulseCounter[telemetry.name];
+        const name = Constants.PerformanceToQuickPulseCounter[telemetry.name];
         if (name) {
             if (this._metrics[name]) {
-                this._metrics[name].Value = (this._metrics[name].Value*this._metrics[name].Weight + value*count) / (this._metrics[name].Weight + count);
+                this._metrics[name].Value =
+                    (this._metrics[name].Value * this._metrics[name].Weight + value * count) /
+                    (this._metrics[name].Weight + count);
                 this._metrics[name].Weight += count;
             } else {
                 this._metrics[name] = QuickPulseEnvelopeFactory.createQuickPulseMetric(telemetry);
@@ -116,8 +118,13 @@ class QuickPulseStateManager {
 
     private _goQuickPulse(): void {
         // Create envelope from Documents and Metrics
-        const metrics = Object.keys(this._metrics).map(k => this._metrics[k]);
-        const envelope = QuickPulseEnvelopeFactory.createQuickPulseEnvelope(metrics, this._documents.slice(), this.config, this.context);
+        const metrics = Object.keys(this._metrics).map((k) => this._metrics[k]);
+        const envelope = QuickPulseEnvelopeFactory.createQuickPulseEnvelope(
+            metrics,
+            this._documents.slice(),
+            this.config,
+            this.context
+        );
 
         // Clear this document, metric buffer
         this._resetQuickPulseBuffer();
@@ -129,12 +136,22 @@ class QuickPulseStateManager {
             this._ping(envelope);
         }
 
-        let currentTimeout = this._isCollectingData ? QuickPulseStateManager.POST_INTERVAL : QuickPulseStateManager.PING_INTERVAL;
-        if (this._isCollectingData && Date.now() - this._lastSuccessTime >= QuickPulseStateManager.MAX_POST_WAIT_TIME && !this._lastSendSucceeded) {
+        let currentTimeout = this._isCollectingData
+            ? QuickPulseStateManager.POST_INTERVAL
+            : QuickPulseStateManager.PING_INTERVAL;
+        if (
+            this._isCollectingData &&
+            Date.now() - this._lastSuccessTime >= QuickPulseStateManager.MAX_POST_WAIT_TIME &&
+            !this._lastSendSucceeded
+        ) {
             // Haven't posted successfully in 20 seconds, so wait 60 seconds and ping
             this._isCollectingData = false;
             currentTimeout = QuickPulseStateManager.FALLBACK_INTERVAL;
-        } else if (!this._isCollectingData && Date.now() - this._lastSuccessTime >= QuickPulseStateManager.MAX_PING_WAIT_TIME && !this._lastSendSucceeded) {
+        } else if (
+            !this._isCollectingData &&
+            Date.now() - this._lastSuccessTime >= QuickPulseStateManager.MAX_PING_WAIT_TIME &&
+            !this._lastSendSucceeded
+        ) {
             // Haven't pinged successfully in 60 seconds, so wait another 60 seconds
             currentTimeout = QuickPulseStateManager.FALLBACK_INTERVAL;
         }

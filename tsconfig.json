@@ -7,6 +7,18 @@
         "sourceMap": true,
         "declaration": true,
         "noImplicitAny": true,
+        "lib": [],
+        "importHelpers": true,
+        "strict": false,
+        "alwaysStrict": false,
+        "strictPropertyInitialization": false,
+        "noUnusedLocals": false,
+        "noUnusedParameters": false,
+        "noImplicitReturns": true,
+        "noFallthroughCasesInSwitch": true,
+        "forceConsistentCasingInFileNames": true,
+        "allowSyntheticDefaultImports": true,
+        "esModuleInterop": true,
         "outDir": "./out"
     },
     "include": [
