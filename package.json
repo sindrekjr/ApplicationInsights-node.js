@@ -1,6 +1,6 @@
 {
   "name": "applicationinsights",
-  "version": "2.0.0-beta.200831.02",
+  "version": "2.0.0-beta.201004.00",
   "description": "Microsoft Application Insights module for Node.js",
   "engines": {
     "node": ">= 8.3.0"

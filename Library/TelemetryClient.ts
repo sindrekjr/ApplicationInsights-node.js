@@ -31,6 +31,7 @@ class TelemetryClient {
     public commonProperties: { [key: string]: string };
     public channel: Channel;
     public quickPulseClient: QuickPulseStateManager;
+    public exporter: AzureMonitorTraceExporter;
 
     private static _azureExporterSetup = false;
 
@@ -43,6 +44,10 @@ class TelemetryClient {
         this.config = config;
         this.context = new Context();
         this.commonProperties = {};
+        this.exporter = new AzureMonitorTraceExporter({
+            connectionString: this.config.connectionString,
+            instrumentationKey: this.config.instrumentationKey,
+        });
 
         const sender = new Sender(this.config);
         this.channel = new Channel(
@@ -56,17 +61,10 @@ class TelemetryClient {
     public setupSpanExporter() {
         if (!TelemetryClient._azureExporterSetup && Provider.instance) {
             Provider.instance.addSpanProcessor(
-                new tracing.BatchSpanProcessor(
-                    new AzureMonitorTraceExporter({
-                        connectionString: this.config.connectionString,
-                        instrumentationKey: this.config.instrumentationKey,
-                        logger: Provider.instance.logger,
-                    }),
-                    {
-                        bufferTimeout: this.config.maxBatchIntervalMs,
-                        bufferSize: this.config.maxBatchSize,
-                    }
-                )
+                new tracing.BatchSpanProcessor(this.exporter, {
+                    bufferTimeout: this.config.maxBatchIntervalMs,
+                    bufferSize: this.config.maxBatchSize,
+                })
             );
             TelemetryClient._azureExporterSetup = true;
         } else {
@@ -259,6 +257,7 @@ class TelemetryClient {
             contextObjects?: { [name: string]: any }
         ) => boolean
     ) {
+        this.exporter.addTelemetryProcessor(telemetryProcessor as any);
         this._telemetryProcessors.push(telemetryProcessor);
     }
 
@@ -266,6 +265,7 @@ class TelemetryClient {
      * Removes all telemetry processors
      */
     public clearTelemetryProcessors() {
+        this.exporter.clearTelemetryProcessors();
         this._telemetryProcessors = [];
     }
 
