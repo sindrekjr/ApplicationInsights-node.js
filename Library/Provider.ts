@@ -111,7 +111,7 @@ export default class Provider {
     }
 
     static flush(callback = () => {}): void {
-        this._instance?.getActiveSpanProcessor().forceFlush(callback);
+        this._instance?.getActiveSpanProcessor().forceFlush().then(callback);
     }
 
     static dispose(): void {

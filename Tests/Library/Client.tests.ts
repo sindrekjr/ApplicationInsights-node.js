@@ -26,8 +26,10 @@ function numberToHrtime(epochMillis: number): HrTime {
 class TestSpanProcessor implements SpanProcessor {
     exportedSpans: ReadableSpan[] = [];
 
-    forceFlush(): void {
-        // no op
+    forceFlush(): Promise<void> {
+        return new Promise((resolve) => {
+            resolve();
+        });
     }
     onStart(span: ReadableSpan): void {
         // no op
@@ -35,8 +37,11 @@ class TestSpanProcessor implements SpanProcessor {
     onEnd(span: ReadableSpan): void {
         this.exportedSpans.push(span);
     }
-    shutdown(): void {
+    shutdown(): Promise<void> {
         this.exportedSpans = [];
+        return new Promise((resolve) => {
+            resolve();
+        });
     }
 }
 
@@ -342,7 +347,6 @@ describe("Library/TelemetryClient", () => {
                 ...properties,
                 [conventions.GeneralAttribute.NET_PEER_ADDRESS]: data,
                 [conventions.HttpAttribute.HTTP_STATUS_CODE]: 200,
-                tags: client.context.tags,
             });
         });
     });
@@ -377,7 +381,6 @@ describe("Library/TelemetryClient", () => {
                 ...properties,
                 [conventions.GeneralAttribute.NET_PEER_ADDRESS]: url,
                 [conventions.HttpAttribute.HTTP_STATUS_CODE]: 200,
-                tags: client.context.tags,
                 ...commonProperties,
             });
         });
@@ -411,10 +414,7 @@ describe("Library/TelemetryClient", () => {
                 ...properties,
                 [conventions.GeneralAttribute.NET_PEER_ADDRESS]: url,
                 [conventions.HttpAttribute.HTTP_STATUS_CODE]: 200,
-                tags: client.context.tags,
             });
-
-            assert.strictEqual(span.attributes.tags[client.context.keys.sessionId], sessionId);
         });
 
         it("should create span with correct properties", () => {
@@ -443,14 +443,7 @@ describe("Library/TelemetryClient", () => {
                 ...properties,
                 [conventions.GeneralAttribute.NET_PEER_ADDRESS]: url,
                 [conventions.HttpAttribute.HTTP_STATUS_CODE]: 200,
-                tags: client.context.tags,
             });
-
-            assert.strictEqual(
-                span.attributes.tags[client.context.keys.sessionId],
-                undefined,
-                "Session ID is not set by default"
-            );
         });
     });
 
@@ -469,7 +462,7 @@ describe("Library/TelemetryClient", () => {
             Provider.start();
             const flushStub = sinon
                 .stub(Provider["_instance"]!.activeSpanProcessor, "forceFlush")
-                .callsFake(() => {});
+                .callsFake(() => new Promise((resolve) => resolve()));
 
             client.flush();
             assert.strictEqual(flushStub.callCount, 1);

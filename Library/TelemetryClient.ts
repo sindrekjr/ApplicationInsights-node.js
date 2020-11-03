@@ -61,7 +61,7 @@ class TelemetryClient {
     public setupSpanExporter() {
         if (!TelemetryClient._azureExporterSetup && Provider.instance) {
             Provider.instance.addSpanProcessor(
-                new tracing.BatchSpanProcessor(this.exporter, {
+                new tracing.BatchSpanProcessor(this.exporter as any, {
                     bufferTimeout: this.config.maxBatchIntervalMs,
                     bufferSize: this.config.maxBatchSize,
                 })
@@ -144,7 +144,6 @@ class TelemetryClient {
                 ...telemetry.properties,
                 [conventions.GeneralAttribute.NET_PEER_ADDRESS]: telemetry.url,
                 [conventions.HttpAttribute.HTTP_STATUS_CODE]: telemetry.resultCode,
-                tags: this.context.tags,
             },
         });
         span.setStatus({
@@ -179,7 +178,6 @@ class TelemetryClient {
                 ...telemetry.properties,
                 [conventions.GeneralAttribute.NET_PEER_ADDRESS]: telemetry.data,
                 [conventions.HttpAttribute.HTTP_STATUS_CODE]: telemetry.resultCode,
-                tags: this.context.tags,
             },
         });
         span.setStatus({
