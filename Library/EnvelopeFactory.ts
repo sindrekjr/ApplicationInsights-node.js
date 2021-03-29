@@ -1,3 +1,18 @@
+import {
+    AvailabilityData,
+    TelemetryItem,
+    TelemetryEventData,
+    TelemetryExceptionData,
+    TelemetryExceptionDetails,
+    DataPointType,
+    MessageData,
+    MetricsData,
+    MetricDataPoint,
+    RemoteDependencyData,
+    RequestData,
+    MonitorBase,
+    PageViewData,
+} from "../generated";
 import Contracts = require("../Declarations/Contracts")
 import Util = require("./Util")
 import Config = require("./Config");
@@ -24,39 +39,45 @@ class EnvelopeFactory {
         telemetryType: Contracts.TelemetryType,
         commonProperties?: { [key: string]: string; },
         context?: Context,
-        config?: Config): Contracts.Envelope {
+        config?: Config): TelemetryItem {
 
-        var data = null;
-
-
+        var data: MonitorBase = {};
         switch (telemetryType) {
             case Contracts.TelemetryType.Trace:
-                data = EnvelopeFactory.createTraceData(<Contracts.TraceTelemetry>telemetry);
+                data.baseData = EnvelopeFactory.createTraceData(<MessageData>telemetry);
+                data.baseType = Contracts.telemetryTypeToBaseType(Contracts.TelemetryType.Trace);
                 break;
             case Contracts.TelemetryType.Dependency:
-                data = EnvelopeFactory.createDependencyData(<Contracts.DependencyTelemetry>telemetry);
+                data.baseData = EnvelopeFactory.createDependencyData(<Contracts.DependencyTelemetry>telemetry);
+                data.baseType = Contracts.telemetryTypeToBaseType(Contracts.TelemetryType.Dependency);
                 break;
             case Contracts.TelemetryType.Event:
-                data = EnvelopeFactory.createEventData(<Contracts.EventTelemetry>telemetry);
+                data.baseData = EnvelopeFactory.createEventData(<Contracts.EventTelemetry>telemetry);
+                data.baseType = Contracts.telemetryTypeToBaseType(Contracts.TelemetryType.Event);
                 break;
             case Contracts.TelemetryType.Exception:
-                data = EnvelopeFactory.createExceptionData(<Contracts.ExceptionTelemetry>telemetry);
+                data.baseData = EnvelopeFactory.createExceptionData(<Contracts.ExceptionTelemetry>telemetry);
+                data.baseType = Contracts.telemetryTypeToBaseType(Contracts.TelemetryType.Exception);
                 break;
             case Contracts.TelemetryType.Request:
-                data = EnvelopeFactory.createRequestData(<Contracts.RequestTelemetry>telemetry);
+                data.baseData = EnvelopeFactory.createRequestData(<Contracts.RequestTelemetry>telemetry);
+                data.baseType = Contracts.telemetryTypeToBaseType(Contracts.TelemetryType.Request);
                 break;
             case Contracts.TelemetryType.Metric:
-                data = EnvelopeFactory.createMetricData(<Contracts.MetricTelemetry>telemetry);
+                data.baseData = EnvelopeFactory.createMetricData(<Contracts.MetricTelemetry>telemetry);
+                data.baseType = Contracts.telemetryTypeToBaseType(Contracts.TelemetryType.Metric);
                 break;
             case Contracts.TelemetryType.Availability:
-                data = EnvelopeFactory.createAvailabilityData(<Contracts.AvailabilityTelemetry>telemetry);
+                data.baseData = EnvelopeFactory.createAvailabilityData(<Contracts.AvailabilityTelemetry>telemetry);
+                data.baseType = Contracts.telemetryTypeToBaseType(Contracts.TelemetryType.Availability);
                 break;
             case Contracts.TelemetryType.PageView:
-                data = EnvelopeFactory.createPageViewData(<Contracts.PageViewTelemetry>telemetry);
+                data.baseData = EnvelopeFactory.createPageViewData(<Contracts.PageViewTelemetry>telemetry);
+                data.baseType = Contracts.telemetryTypeToBaseType(Contracts.TelemetryType.PageView);
                 break;
         }
 
-        if (commonProperties && Contracts.domainSupportsProperties(data.baseData)) { // Do instanceof check. TS will automatically cast and allow the properties property
+        if (commonProperties) {
             if (data && data.baseData) {
                 // if no properties are specified just add the common ones
                 if (!data.baseData.properties) {
@@ -77,19 +98,21 @@ class EnvelopeFactory {
         }
 
         var iKey = config ? config.instrumentationKey || "" : "";
-        var envelope = new Contracts.Envelope();
-        envelope.data = data;
-        envelope.iKey = iKey;
-
-        // this is kind of a hack, but the envelope name is always the same as the data name sans the chars "data"
-        envelope.name =
-            "Microsoft.ApplicationInsights." +
-            iKey.replace(/-/g, "") +
-            "." +
-            data.baseType.substr(0, data.baseType.length - 4);
+        var envelope: TelemetryItem = {
+            // this is kind of a hack, but the envelope name is always the same as the data name sans the chars "data"
+            name: "Microsoft.ApplicationInsights." +
+                iKey.replace(/-/g, "") +
+                "." +
+                data.baseType.substr(0, data.baseType.length - 4),
+            time: new Date(),
+        };
+        envelope.data = {
+            baseType: data.baseType,
+            baseData: data.baseData
+        };
+        envelope.instrumentationKey = iKey;
         envelope.tags = this.getTags(context, telemetry.tagOverrides);
-        envelope.time = (new Date()).toISOString();
-        envelope.ver = 1;
+        envelope.version = 1;
         envelope.sampleRate = config ? config.samplingPercentage : 100;
 
         // Exclude metrics from sampling by default
@@ -100,30 +123,29 @@ class EnvelopeFactory {
         return envelope;
     }
 
-    private static createTraceData(telemetry: Contracts.TraceTelemetry): Contracts.Data<Contracts.MessageData> {
-        var trace = new Contracts.MessageData();
-        trace.message = telemetry.message;
-        trace.properties = telemetry.properties;
+    private static createTraceData(telemetry: Contracts.TraceTelemetry): MessageData {
+        var trace: MessageData = {
+            version: 1,
+            message: telemetry.message,
+            properties: telemetry.properties
+        };
         if (!isNaN(telemetry.severity)) {
-            trace.severityLevel = telemetry.severity;
+            trace.severityLevel = telemetry.severity.toString();
         } else {
-            trace.severityLevel = Contracts.SeverityLevel.Information;
+            trace.severityLevel = Contracts.SeverityLevel.Information.toString();
         }
-
-        var data = new Contracts.Data<Contracts.MessageData>();
-        data.baseType = Contracts.telemetryTypeToBaseType(Contracts.TelemetryType.Trace);
-        data.baseData = trace;
-        return data;
+        return trace;
     }
 
-    private static createDependencyData(telemetry: Contracts.DependencyTelemetry & Contracts.Identified): Contracts.Data<Contracts.RemoteDependencyData> {
-        var remoteDependency = new Contracts.RemoteDependencyData();
-        if (typeof telemetry.name === "string") {
-            remoteDependency.name = telemetry.name.length > 1024 ? telemetry.name.slice(0, 1021) + '...' : telemetry.name;
-        }
+    private static createDependencyData(telemetry: Contracts.DependencyTelemetry & Contracts.Identified): RemoteDependencyData {
+        var remoteDependency: RemoteDependencyData = {
+            version: 1,
+            name: telemetry.name && telemetry.name.length > 1024 ? telemetry.name.slice(0, 1021) + '...' : telemetry.name,
+            duration: Util.msToTimeSpan(telemetry.duration)
+        };
+
         remoteDependency.data = telemetry.data;
         remoteDependency.target = telemetry.target;
-        remoteDependency.duration = Util.msToTimeSpan(telemetry.duration);
         remoteDependency.success = telemetry.success;
         remoteDependency.type = telemetry.dependencyTypeName;
         remoteDependency.properties = telemetry.properties;
@@ -135,136 +157,113 @@ class EnvelopeFactory {
         else {
             remoteDependency.id = Util.w3cTraceId();
         }
-
-        var data = new Contracts.Data<Contracts.RemoteDependencyData>();
-        data.baseType = Contracts.telemetryTypeToBaseType(Contracts.TelemetryType.Dependency);
-        data.baseData = remoteDependency;
-        return data;
+        return remoteDependency;
     }
 
-    private static createEventData(telemetry: Contracts.EventTelemetry): Contracts.Data<Contracts.EventData> {
-        var event = new Contracts.EventData();
-        event.name = telemetry.name;
+    private static createEventData(telemetry: Contracts.EventTelemetry): TelemetryEventData {
+        var event: TelemetryEventData = {
+            version: 1,
+            name: telemetry.name,
+            properties: telemetry.properties,
+            measurements: telemetry.measurements
+        };
         event.properties = telemetry.properties;
         event.measurements = telemetry.measurements;
-
-        var data = new Contracts.Data<Contracts.EventData>();
-        data.baseType = Contracts.telemetryTypeToBaseType(Contracts.TelemetryType.Event);
-        data.baseData = event;
-        return data;
+        return event;
     }
 
-    private static createExceptionData(telemetry: Contracts.ExceptionTelemetry): Contracts.Data<Contracts.ExceptionData> {
-        var exception = new Contracts.ExceptionData();
+    private static createExceptionData(telemetry: Contracts.ExceptionTelemetry): TelemetryExceptionData {
+        var exception: TelemetryExceptionData = {
+            version: 1,
+            exceptions: []
+        };
         exception.properties = telemetry.properties;
         if (!isNaN(telemetry.severity)) {
-            exception.severityLevel = telemetry.severity;
+            exception.severityLevel = telemetry.severity.toString();
         } else {
-            exception.severityLevel = Contracts.SeverityLevel.Error;
+            exception.severityLevel = Contracts.SeverityLevel.Error.toString();
         }
         exception.measurements = telemetry.measurements;
-        exception.exceptions = [];
 
         var stack = telemetry.exception["stack"];
-        var exceptionDetails = new Contracts.ExceptionDetails();
-        exceptionDetails.message = telemetry.exception.message;
-        exceptionDetails.typeName = telemetry.exception.name;
-        exceptionDetails.parsedStack = this.parseStack(stack);
+        var exceptionDetails: TelemetryExceptionDetails = {
+            message: telemetry.exception.message,
+            typeName: telemetry.exception.name,
+            parsedStack: this.parseStack(stack)
+        };
         exceptionDetails.hasFullStack = Util.isArray(exceptionDetails.parsedStack) && exceptionDetails.parsedStack.length > 0;
         exception.exceptions.push(exceptionDetails);
-
-        var data = new Contracts.Data<Contracts.ExceptionData>();
-        data.baseType = Contracts.telemetryTypeToBaseType(Contracts.TelemetryType.Exception);
-        data.baseData = exception;
-        return data;
+        return exception;
     }
 
-    private static createRequestData(telemetry: Contracts.RequestTelemetry & Contracts.Identified): Contracts.Data<Contracts.RequestData> {
-        var requestData = new Contracts.RequestData();
-        if (telemetry.id) {
-            requestData.id = telemetry.id;
-        }
-        else {
-            requestData.id = Util.w3cTraceId();
-        }
-        requestData.name = telemetry.name;
-        requestData.url = telemetry.url;
-        requestData.source = telemetry.source;
-        requestData.duration = Util.msToTimeSpan(telemetry.duration);
-        requestData.responseCode = (telemetry.resultCode ? telemetry.resultCode + '' : '');
-        requestData.success = telemetry.success
-        requestData.properties = telemetry.properties;
-
-        var data = new Contracts.Data<Contracts.RequestData>();
-        data.baseType = Contracts.telemetryTypeToBaseType(Contracts.TelemetryType.Request);
-        data.baseData = requestData;
-        return data;
+    private static createRequestData(telemetry: Contracts.RequestTelemetry & Contracts.Identified): RequestData {
+        var requestData: RequestData = {
+            version: 1,
+            name: telemetry.name,
+            url: telemetry.url,
+            id: telemetry.id ? telemetry.id : Util.w3cTraceId(),
+            source: telemetry.source,
+            duration: Util.msToTimeSpan(telemetry.duration),
+            responseCode: (telemetry.resultCode ? telemetry.resultCode + '' : ''),
+            success: telemetry.success,
+            properties: telemetry.properties
+        };
+        return requestData;
     }
 
-    private static createMetricData(telemetry: Contracts.MetricTelemetry): Contracts.Data<Contracts.MetricData> {
-        var metrics = new Contracts.MetricData(); // todo: enable client-batching of these
-        metrics.metrics = [];
+    private static createMetricData(telemetry: Contracts.MetricTelemetry): MetricsData {
+        var metricDataPoints: MetricDataPoint[] = [];
 
-        var metric = new Contracts.DataPoint();
-        metric.count = !isNaN(telemetry.count) ? telemetry.count : 1;
-        metric.kind = Contracts.DataPointType.Aggregation;
-        metric.max = !isNaN(telemetry.max) ? telemetry.max : telemetry.value;
-        metric.min = !isNaN(telemetry.min) ? telemetry.min : telemetry.value;
-        metric.name = telemetry.name;
-        metric.stdDev = !isNaN(telemetry.stdDev) ? telemetry.stdDev : 0;
-        metric.value = telemetry.value;
+        var metricDataPoint: MetricDataPoint = {
+            name: telemetry.name,
+            value: telemetry.value,
+            count: !isNaN(telemetry.count) ? telemetry.count : 1,
+            dataPointType: "Aggregation" as DataPointType,
+            max: !isNaN(telemetry.max) ? telemetry.max : telemetry.value,
+            min: !isNaN(telemetry.min) ? telemetry.min : telemetry.value,
+            stdDev: !isNaN(telemetry.stdDev) ? telemetry.stdDev : 0,
+        };
 
-        metrics.metrics.push(metric);
+        metricDataPoints.push(metricDataPoint);
+        var metricsData: MetricsData = {
+            version: 1,
+            metrics: metricDataPoints,
+            properties: telemetry.properties
+        }; // todo: enable client-batching of these
 
-        metrics.properties = telemetry.properties;
-
-        var data = new Contracts.Data<Contracts.MetricData>();
-        data.baseType = Contracts.telemetryTypeToBaseType(Contracts.TelemetryType.Metric);
-        data.baseData = metrics;
-        return data;
+        return metricsData;
     }
 
     private static createAvailabilityData(
         telemetry: Contracts.AvailabilityTelemetry & Contracts.Identified,
-    ): Contracts.Data<Contracts.AvailabilityData> {
-        let availabilityData = new Contracts.AvailabilityData();
-
-        if (telemetry.id) {
-            availabilityData.id = telemetry.id;
-        } else {
-            availabilityData.id = Util.w3cTraceId();
-        }
-        availabilityData.name = telemetry.name;
-        availabilityData.duration = Util.msToTimeSpan(telemetry.duration);
-        availabilityData.success = telemetry.success;
-        availabilityData.runLocation = telemetry.runLocation;
-        availabilityData.message = telemetry.message;
-        availabilityData.measurements = telemetry.measurements;
-        availabilityData.properties = telemetry.properties;
-
-        let data = new Contracts.Data<Contracts.AvailabilityData>();
-        data.baseType = Contracts.telemetryTypeToBaseType(Contracts.TelemetryType.Availability);
-        data.baseData = availabilityData;
-
-        return data;
+    ): AvailabilityData {
+        let availabilityData: AvailabilityData = {
+            version: 1,
+            id: telemetry.id ? telemetry.id : Util.w3cTraceId(),
+            name: telemetry.name,
+            duration: Util.msToTimeSpan(telemetry.duration),
+            success: telemetry.success,
+            runLocation: telemetry.runLocation,
+            message: telemetry.message,
+            measurements: telemetry.measurements,
+            properties: telemetry.properties
+        };
+        return availabilityData;
     }
 
     private static createPageViewData(
         telemetry: Contracts.PageViewTelemetry & Contracts.Identified,
-    ): Contracts.Data<Contracts.PageViewData> {
-        let pageViewData = new Contracts.PageViewData();
-
-        pageViewData.name = telemetry.name;
-        pageViewData.duration = Util.msToTimeSpan(telemetry.duration);
-        pageViewData.url = telemetry.url;
-        pageViewData.measurements = telemetry.measurements;
-        pageViewData.properties = telemetry.properties;
-
-        let data = new Contracts.Data<Contracts.PageViewData>();
-        data.baseType = Contracts.telemetryTypeToBaseType(Contracts.TelemetryType.PageView);
-        data.baseData = pageViewData;
-
-        return data;
+    ): PageViewData {
+        let pageViewData: PageViewData = {
+            version: 1,
+            id: telemetry.id ? telemetry.id : Util.w3cTraceId(),
+            name: telemetry.name,
+            duration: Util.msToTimeSpan(telemetry.duration),
+            url: telemetry.url,
+            measurements: telemetry.measurements,
+            properties: telemetry.properties
+        };
+        return pageViewData;
     }
 
     private static getTags(context: Context, tagOverrides?: { [key: string]: string; }) {

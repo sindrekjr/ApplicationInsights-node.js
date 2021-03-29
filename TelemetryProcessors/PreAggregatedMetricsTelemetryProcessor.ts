@@ -1,5 +1,5 @@
-import Contracts = require("../Declarations/Contracts");
-import AutoCollecPreAggregatedMetrics = require("../AutoCollection/PreAggregatedMetrics");
+import Models = require("../generated");
+import AutoCollectPreAggregatedMetrics = require("../AutoCollection/PreAggregatedMetrics");
 import * as TelemetryType from "../Declarations/Contracts";
 import {
     MetricDependencyDimensions,
@@ -9,12 +9,12 @@ import {
 } from "../Declarations/Metrics/AggregatedMetricDimensions";
 import Context = require("../Library/Context");
 
-export function preAggregatedMetricsTelemetryProcessor(envelope: Contracts.EnvelopeTelemetry, context: Context): boolean {
-    if (AutoCollecPreAggregatedMetrics.isEnabled()) {
+export function preAggregatedMetricsTelemetryProcessor(envelope: Models.TelemetryItem, context: Context): boolean {
+    if (AutoCollectPreAggregatedMetrics.isEnabled()) {
         // Increment rate counters
         switch (envelope.data.baseType) {
             case TelemetryType.TelemetryTypeString.Exception:
-                const exceptionData: Contracts.ExceptionData = (envelope.data as any).baseData;
+                const exceptionData: Models.TelemetryExceptionData = (envelope.data as any).baseData;
                 exceptionData.properties = {
                     ...exceptionData.properties,
                     "_MS.ProcessedByMetricExtractors": "(Name:'Exceptions', Ver:'1.1')"
@@ -23,10 +23,10 @@ export function preAggregatedMetricsTelemetryProcessor(envelope: Contracts.Envel
                     cloudRoleInstance: envelope.tags[context.keys.cloudRoleInstance],
                     cloudRoleName: envelope.tags[context.keys.cloudRole],
                 };
-                AutoCollecPreAggregatedMetrics.countException(exceptionDimensions);
+                AutoCollectPreAggregatedMetrics.countException(exceptionDimensions);
                 break;
             case TelemetryType.TelemetryTypeString.Trace:
-                const traceData: Contracts.TraceTelemetry = (envelope.data as any).baseData;
+                const traceData: Models.MessageData = (envelope.data as any).baseData;
                 traceData.properties = {
                     ...traceData.properties,
                     "_MS.ProcessedByMetricExtractors": "(Name:'Traces', Ver:'1.1')"
@@ -34,12 +34,12 @@ export function preAggregatedMetricsTelemetryProcessor(envelope: Contracts.Envel
                 let traceDimensions: MetricTraceDimensions = {
                     cloudRoleInstance: envelope.tags[context.keys.cloudRoleInstance],
                     cloudRoleName: envelope.tags[context.keys.cloudRole],
-                    traceSeverityLevel: Contracts.SeverityLevel[traceData.severity],
+                    traceSeverityLevel: traceData.severity,
                 };
-                AutoCollecPreAggregatedMetrics.countTrace(traceDimensions);
+                AutoCollectPreAggregatedMetrics.countTrace(traceDimensions);
                 break;
             case TelemetryType.TelemetryTypeString.Request:
-                const requestData: Contracts.RequestData = (envelope.data as any).baseData;
+                const requestData: Models.RequestData = (envelope.data as any).baseData;
                 requestData.properties = {
                     ...requestData.properties,
                     "_MS.ProcessedByMetricExtractors": "(Name:'Requests', Ver:'1.1')"
@@ -51,10 +51,10 @@ export function preAggregatedMetricsTelemetryProcessor(envelope: Contracts.Envel
                     requestSuccess: requestData.success,
                     requestResultCode: requestData.responseCode,
                 };
-                AutoCollecPreAggregatedMetrics.countRequest(requestData.duration, requestDimensions);
+                AutoCollectPreAggregatedMetrics.countRequest(requestData.duration, requestDimensions);
                 break;
             case TelemetryType.TelemetryTypeString.Dependency:
-                const remoteDependencyData: Contracts.RemoteDependencyData = (envelope.data as any).baseData;
+                const remoteDependencyData: Models.RemoteDependencyData = (envelope.data as any).baseData;
                 remoteDependencyData.properties = {
                     ...remoteDependencyData.properties,
                     "_MS.ProcessedByMetricExtractors": "(Name:'Dependencies', Ver:'1.1')"
@@ -68,7 +68,7 @@ export function preAggregatedMetricsTelemetryProcessor(envelope: Contracts.Envel
                     dependencyTarget: remoteDependencyData.target,
                     dependencyResultCode: remoteDependencyData.resultCode,
                 };
-                AutoCollecPreAggregatedMetrics.countDependency(remoteDependencyData.duration, dependencyDimensions);
+                AutoCollectPreAggregatedMetrics.countDependency(remoteDependencyData.duration, dependencyDimensions);
                 break;
         }
     }

@@ -4,6 +4,7 @@ import os = require("os");
 import Config = require("./Config");
 import Context = require("./Context");
 import Contracts = require("../Declarations/Contracts");
+import { TelemetryItem } from "../generated";
 import Channel = require("./Channel");
 import TelemetryProcessors = require("../TelemetryProcessors");
 import { CorrelationContextManager } from "../AutoCollection/CorrelationContextManager";
@@ -13,14 +14,14 @@ import Logging = require("./Logging");
 import FlushOptions = require("./FlushOptions");
 import EnvelopeFactory = require("./EnvelopeFactory");
 import QuickPulseStateManager = require("./QuickPulseStateManager");
-import {Tags} from "../Declarations/Contracts";
+
 
 /**
  * Application Insights telemetry client provides interface to track telemetry items, register telemetry initializers and
  * and manually trigger immediate sending (flushing)
  */
 class TelemetryClient {
-    private _telemetryProcessors: { (envelope: Contracts.EnvelopeTelemetry, contextObjects: { [name: string]: any; }): boolean; }[] = [];
+    private _telemetryProcessors: { (envelope: TelemetryItem, contextObjects: { [name: string]: any; }): boolean; }[] = [];
     private _enableAzureProperties: boolean = false;
 
     public config: Config;
@@ -144,7 +145,7 @@ class TelemetryClient {
 
             // Set time on the envelope if it was set on the telemetry item
             if (telemetry.time) {
-                envelope.time = telemetry.time.toISOString();
+                envelope.time = telemetry.time;
             }
             if (this._enableAzureProperties) {
                 TelemetryProcessors.azureRoleEnvironmentTelemetryProcessor(envelope, this.context);
@@ -180,7 +181,7 @@ class TelemetryClient {
      *
      * @param telemetryProcessor function, takes Envelope, and optional context object and returns boolean
      */
-    public addTelemetryProcessor(telemetryProcessor: (envelope: Contracts.EnvelopeTelemetry, contextObjects?: { [name: string]: any; }) => boolean) {
+    public addTelemetryProcessor(telemetryProcessor: (envelope: TelemetryItem, contextObjects?: { [name: string]: any; }) => boolean) {
         this._telemetryProcessors.push(telemetryProcessor);
     }
 
@@ -191,7 +192,7 @@ class TelemetryClient {
         this._telemetryProcessors = [];
     }
 
-    private runTelemetryProcessors(envelope: Contracts.EnvelopeTelemetry, contextObjects: { [name: string]: any; }): boolean {
+    private runTelemetryProcessors(envelope: TelemetryItem, contextObjects: { [name: string]: any; }): boolean {
         var accepted = true;
         var telemetryProcessorsCount = this._telemetryProcessors.length;
 
@@ -221,7 +222,7 @@ class TelemetryClient {
         // Sanitize tags and properties after running telemetry processors
         if (accepted) {
             if (envelope && envelope.tags) {
-                envelope.tags = Util.validateStringMap(envelope.tags) as Tags & Tags[];
+                envelope.tags = Util.validateStringMap(envelope.tags);
             }
             if (envelope && envelope.data && envelope.data.baseData && envelope.data.baseData.properties) {
                 envelope.data.baseData.properties = Util.validateStringMap(envelope.data.baseData.properties);

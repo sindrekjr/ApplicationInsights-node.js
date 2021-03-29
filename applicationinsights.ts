@@ -2,7 +2,7 @@ import CorrelationContextManager = require("./AutoCollection/CorrelationContextM
 import AutoCollectConsole = require("./AutoCollection/Console");
 import AutoCollectExceptions = require("./AutoCollection/Exceptions");
 import AutoCollectPerformance = require("./AutoCollection/Performance");
-import AutoCollecPreAggregatedMetrics = require("./AutoCollection/PreAggregatedMetrics");
+import AutoCollectPreAggregatedMetrics = require("./AutoCollection/PreAggregatedMetrics");
 import HeartBeat = require("./AutoCollection/HeartBeat");
 import AutoCollectHttpDependencies = require("./AutoCollection/HttpDependencies");
 import AutoCollectHttpRequests = require("./AutoCollection/HttpRequests");
@@ -18,6 +18,7 @@ import { AutoCollectNativePerformance, IDisabledExtendedMetrics } from "./AutoCo
 // They're exposed using "export import" so that types are passed along as expected
 export import TelemetryClient = require("./Library/NodeClient");
 export import Contracts = require("./Declarations/Contracts");
+export import Models = require("./generated");
 export import azureFunctionsTypes = require("./Library/Functions");
 
 export enum DistributedTracingModes {
@@ -55,7 +56,7 @@ let _diskRetryMaxBytes: number = undefined;
 let _console: AutoCollectConsole;
 let _exceptions: AutoCollectExceptions;
 let _performance: AutoCollectPerformance;
-let _preAggregatedMetrics: AutoCollecPreAggregatedMetrics;
+let _preAggregatedMetrics: AutoCollectPreAggregatedMetrics;
 let _heartbeat: HeartBeat;
 let _nativePerformance: AutoCollectNativePerformance;
 let _serverRequests: AutoCollectHttpRequests;
@@ -87,7 +88,7 @@ export function setup(setupString?: string) {
         _console = new AutoCollectConsole(defaultClient);
         _exceptions = new AutoCollectExceptions(defaultClient);
         _performance = new AutoCollectPerformance(defaultClient);
-        _preAggregatedMetrics = new AutoCollecPreAggregatedMetrics(defaultClient);
+        _preAggregatedMetrics = new AutoCollectPreAggregatedMetrics(defaultClient);
         _heartbeat = new HeartBeat(defaultClient);
         _serverRequests = new AutoCollectHttpRequests(defaultClient);
         _clientRequests = new AutoCollectHttpDependencies(defaultClient);

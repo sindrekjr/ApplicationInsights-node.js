@@ -1,6 +1,7 @@
 import os = require("os");
 import Contracts = require("../Declarations/Contracts")
 import Constants = require("../Declarations/Constants");
+import Models = require("../generated");
 import Util = require("./Util")
 import Config = require("./Config");
 import Context = require("./Context");
@@ -52,7 +53,7 @@ class QuickPulseEnvelopeFactory {
         return data;
     }
 
-    public static telemetryEnvelopeToQuickPulseDocument(envelope: Contracts.Envelope): Contracts.DocumentQuickPulse {
+    public static telemetryEnvelopeToQuickPulseDocument(envelope: Models.TelemetryItem): Contracts.DocumentQuickPulse {
         switch (envelope.data.baseType) {
             case Contracts.TelemetryTypeString.Event:
                 return QuickPulseEnvelopeFactory.createQuickPulseEventDocument(envelope);
@@ -68,32 +69,33 @@ class QuickPulseEnvelopeFactory {
         return null;
     }
 
-    private static createQuickPulseEventDocument(envelope: Contracts.Envelope): Contracts.EventDocumentQuickPulse {
+    private static createQuickPulseEventDocument(envelope: Models.TelemetryItem): Contracts.EventDocumentQuickPulse {
         const document = QuickPulseEnvelopeFactory.createQuickPulseDocument(envelope);
-        const name = ((envelope.data as any).baseData as Contracts.EventData).name;
+        const baseData = envelope.data.baseData as Models.TelemetryEventData;
         const eventDocument: Contracts.EventDocumentQuickPulse = {
             ...document,
-            Name: name
+            Name: baseData.name
         };
 
         return eventDocument;
     }
 
-    private static createQuickPulseTraceDocument(envelope: Contracts.Envelope): Contracts.MessageDocumentQuickPulse {
+    private static createQuickPulseTraceDocument(envelope: Models.TelemetryItem): Contracts.MessageDocumentQuickPulse {
         const document = QuickPulseEnvelopeFactory.createQuickPulseDocument(envelope);
-        const severityLevel = ((envelope.data as any).baseData as Contracts.MessageData).severityLevel || 0;
+        const baseData = envelope.data.baseData as Models.MessageData;
         var traceDocument: Contracts.MessageDocumentQuickPulse = {
             ...document,
-            Message: ((envelope.data as any).baseData as Contracts.MessageData).message,
-            SeverityLevel: Contracts.SeverityLevel[severityLevel]
+            Message: baseData.message,
+            SeverityLevel: baseData.severityLevel
         }
 
         return traceDocument;
     }
 
-    private static createQuickPulseExceptionDocument(envelope: Contracts.Envelope): Contracts.ExceptionDocumentQuickPulse {
+    private static createQuickPulseExceptionDocument(envelope: Models.TelemetryItem): Contracts.ExceptionDocumentQuickPulse {
         const document = QuickPulseEnvelopeFactory.createQuickPulseDocument(envelope);
-        const exceptionDetails = ((envelope.data as any).baseData as Contracts.ExceptionData).exceptions;
+        const baseData = envelope.data.baseData as Models.TelemetryExceptionData;
+        const exceptionDetails = baseData.exceptions;
 
         let exception = '';
         let exceptionMessage = '';
@@ -123,9 +125,9 @@ class QuickPulseEnvelopeFactory {
         return exceptionDocument;
     }
 
-    private static createQuickPulseRequestDocument(envelope: Contracts.Envelope): Contracts.RequestDocumentQuickPulse {
+    private static createQuickPulseRequestDocument(envelope: Models.TelemetryItem): Contracts.RequestDocumentQuickPulse {
         const document = QuickPulseEnvelopeFactory.createQuickPulseDocument(envelope);
-        const baseData = (envelope.data as Contracts.Data<Contracts.RequestData>).baseData;
+        const baseData = envelope.data.baseData as Models.RequestData;
         const requestDocument: Contracts.RequestDocumentQuickPulse = {
             ...document,
             Name: baseData.name,
@@ -138,9 +140,9 @@ class QuickPulseEnvelopeFactory {
         return requestDocument;
     }
 
-    private static createQuickPulseDependencyDocument(envelope: Contracts.Envelope): Contracts.DependencyDocumentQuickPulse {
+    private static createQuickPulseDependencyDocument(envelope: Models.TelemetryItem): Contracts.DependencyDocumentQuickPulse {
         const document = QuickPulseEnvelopeFactory.createQuickPulseDocument(envelope);
-        const baseData = (envelope.data as Contracts.Data<Contracts.RemoteDependencyData>).baseData;
+        const baseData = envelope.data.baseData as Models.RemoteDependencyData;
 
         const dependencyDocument: Contracts.DependencyDocumentQuickPulse = {
             ...document,
@@ -156,7 +158,7 @@ class QuickPulseEnvelopeFactory {
         return dependencyDocument;
     }
 
-    private static createQuickPulseDocument(envelope: Contracts.Envelope): Contracts.DocumentQuickPulse {
+    private static createQuickPulseDocument(envelope: Models.TelemetryItem): Contracts.DocumentQuickPulse {
         let documentType: Constants.QuickPulseDocumentType;
         let __type: Constants.QuickPulseType;
         let operationId, properties;
@@ -185,7 +187,7 @@ class QuickPulseEnvelopeFactory {
         return document;
     }
 
-    private static aggregateProperties(envelope: Contracts.Envelope): Contracts.IDocumentProperty[] {
+    private static aggregateProperties(envelope: Models.TelemetryItem): Contracts.IDocumentProperty[] {
         const properties: Contracts.IDocumentProperty[] = [];
 
         // Collect measurements
@@ -193,7 +195,7 @@ class QuickPulseEnvelopeFactory {
         for (let key in meas) {
             if (meas.hasOwnProperty(key)) {
                 const value = meas[key];
-                const property: Contracts.IDocumentProperty = {key, value};
+                const property: Contracts.IDocumentProperty = { key, value };
                 properties.push(property);
             }
         }
@@ -203,7 +205,7 @@ class QuickPulseEnvelopeFactory {
         for (let key in props) {
             if (props.hasOwnProperty(key)) {
                 const value = props[key];
-                const property: Contracts.IDocumentProperty = {key, value};
+                const property: Contracts.IDocumentProperty = { key, value };
                 properties.push(property);
             }
         }

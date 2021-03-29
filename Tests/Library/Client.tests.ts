@@ -1,16 +1,16 @@
 import assert = require("assert");
-import crypto = require('crypto');
 import sinon = require("sinon");
 import Sinon = require("sinon");
-import http = require("http");
 import eventEmitter = require('events');
 
 import Client = require("../../Library/NodeClient");
 import Config = require("../../Library/Config");
 import Contracts = require("../../Declarations/Contracts");
+import Models = require("../../generated");
 import RequestResponseHeaders = require("../../Library/RequestResponseHeaders");
 import Util = require("../../Library/Util");
 import EnvelopeFactory = require("../../Library/EnvelopeFactory");
+import AutoCollectPreAggregatedMetrics = require("../../AutoCollection/PreAggregatedMetrics");
 
 describe("Library/TelemetryClient", () => {
 
@@ -47,12 +47,15 @@ describe("Library/TelemetryClient", () => {
     var triggerStub: Sinon.SinonStub;
     var sendStub: Sinon.SinonStub;
     var saveOnCrashStub: Sinon.SinonStub;
+    var preAggregated: AutoCollectPreAggregatedMetrics = null;
 
     before(() => {
         trackStub = sinon.stub(client, "track");
         triggerStub = sinon.stub(client.channel, "triggerSend");
         sendStub = sinon.stub(client.channel, "send");
         saveOnCrashStub = sinon.stub(client.channel._sender, "saveOnCrash");
+        preAggregated = new AutoCollectPreAggregatedMetrics(client);
+        preAggregated.enable(true);
     });
     after(() => {
         trackStub.restore();
@@ -80,25 +83,25 @@ describe("Library/TelemetryClient", () => {
 
     describe("#constructor()", () => {
         it("should initialize config", () => {
-            var client = new Client("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333");
-            assert.ok(client.config);
-            assert.ok(client.config.instrumentationKey);
+            var testClient = new Client("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333");
+            assert.ok(testClient.config);
+            assert.ok(testClient.config.instrumentationKey);
         });
 
         it("should initialize context", () => {
-            var client = new Client("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333");
-            assert.ok(client.context);
-            assert.ok(client.context.tags);
+            var testClient = new Client("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333");
+            assert.ok(testClient.context);
+            assert.ok(testClient.context.tags);
         });
 
         it("should initialize common properties", () => {
-            var client = new Client("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333");
-            assert.ok(client.commonProperties);
+            var testClient = new Client("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333");
+            assert.ok(testClient.commonProperties);
         });
 
         it("should initialize channel", () => {
-            var client = new Client("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333");
-            assert.ok(client.channel);
+            var testClient = new Client("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333");
+            assert.ok(testClient.channel);
         });
     });
 
@@ -679,10 +682,10 @@ describe("Library/TelemetryClient", () => {
             client.trackException({ exception: new Error(name), properties: properties });
             assert.ok(createEnvelopeSpy.calledOnce);
             var envelopeCreated = createEnvelopeSpy.firstCall.returnValue;
-            var obj0 = <Contracts.Data<Contracts.ExceptionData>>envelopeCreated.data;
+            var obj0 = <Models.TelemetryExceptionData>envelopeCreated.data.baseData;
             createEnvelopeSpy.restore();
-            assert.equal(obj0.baseData.exceptions[0].message, name);
-            assert.deepEqual(obj0.baseData.properties, exceptionExpectedProperties);
+            assert.equal(obj0.exceptions[0].message, name);
+            assert.deepEqual(obj0.properties, exceptionExpectedProperties);
         });
 
         it("trace telemetry", () => {
@@ -691,11 +694,11 @@ describe("Library/TelemetryClient", () => {
             client.trackTrace({ message: name });
             assert.ok(createEnvelopeSpy.calledOnce);
             var envelopeCreated = createEnvelopeSpy.firstCall.returnValue;
-            var obj0 = <Contracts.Data<Contracts.TraceTelemetry>>envelopeCreated.data;
+            var obj0 = <Models.MessageData>envelopeCreated.data.baseData;
             createEnvelopeSpy.restore();
 
-            assert.equal(obj0.baseData.message, name);
-            assert.deepEqual(obj0.baseData.properties, traceExpectedProperties);
+            assert.equal(obj0.message, name);
+            assert.deepEqual(obj0.properties, traceExpectedProperties);
         });
     });
 
@@ -710,16 +713,16 @@ describe("Library/TelemetryClient", () => {
 
 
             var envelopeCreated = createEnvelopeSpy.firstCall.returnValue;
-            var obj0 = <Contracts.Data<Contracts.RemoteDependencyData>>envelopeCreated.data;
+            var obj0 = <Models.RemoteDependencyData>envelopeCreated.data.baseData;
             createEnvelopeSpy.restore();
 
-            assert.equal(obj0.baseData.name, name);
-            assert.equal(obj0.baseData.data, commandName);
-            assert.equal(obj0.baseData.target, 'bing.com');
-            assert.equal(obj0.baseData.duration, Util.msToTimeSpan(value));
-            assert.equal(obj0.baseData.success, true);
-            assert.equal(obj0.baseData.type, dependencyTypeName);
-            assert.deepEqual(obj0.baseData.properties, dependencyExpectedProperties);
+            assert.equal(obj0.name, name);
+            assert.equal(obj0.data, commandName);
+            assert.equal(obj0.target, 'bing.com');
+            assert.equal(obj0.duration, Util.msToTimeSpan(value));
+            assert.equal(obj0.success, true);
+            assert.equal(obj0.type, dependencyTypeName);
+            assert.deepEqual(obj0.properties, dependencyExpectedProperties);
         });
 
         it("should create envelope with correct properties (numeric result code)", () => {
@@ -732,16 +735,16 @@ describe("Library/TelemetryClient", () => {
 
 
             var envelopeCreated = createEnvelopeSpy.firstCall.returnValue;
-            var obj0 = <Contracts.Data<Contracts.RemoteDependencyData>>envelopeCreated.data;
+            var obj0 = <Models.RemoteDependencyData>envelopeCreated.data.baseData;
             createEnvelopeSpy.restore();
 
-            assert.equal(obj0.baseData.name, name);
-            assert.equal(obj0.baseData.data, commandName);
-            assert.equal(obj0.baseData.target, 'bing.com');
-            assert.equal(obj0.baseData.duration, Util.msToTimeSpan(value));
-            assert.equal(obj0.baseData.success, true);
-            assert.equal(obj0.baseData.type, dependencyTypeName);
-            assert.deepEqual(obj0.baseData.properties, dependencyExpectedProperties);
+            assert.equal(obj0.name, name);
+            assert.equal(obj0.data, commandName);
+            assert.equal(obj0.target, 'bing.com');
+            assert.equal(obj0.duration, Util.msToTimeSpan(value));
+            assert.equal(obj0.success, true);
+            assert.equal(obj0.type, dependencyTypeName);
+            assert.deepEqual(obj0.properties, dependencyExpectedProperties);
         });
 
         it("should process the id when specified", () => {
@@ -754,10 +757,10 @@ describe("Library/TelemetryClient", () => {
 
 
             var envelopeCreated = createEnvelopeSpy.firstCall.returnValue;
-            var obj0 = <Contracts.Data<Contracts.RemoteDependencyData>>envelopeCreated.data;
+            var obj0 = <Models.RemoteDependencyData>envelopeCreated.data.baseData;
             createEnvelopeSpy.restore();
-            assert.equal(obj0.baseData.id, "testid");
-            assert.deepEqual(obj0.baseData.properties, dependencyExpectedProperties);
+            assert.equal(obj0.id, "testid");
+            assert.deepEqual(obj0.properties, dependencyExpectedProperties);
         });
 
         it("should auto-generate the id when not specified", () => {
@@ -770,10 +773,10 @@ describe("Library/TelemetryClient", () => {
 
 
             var envelopeCreated = createEnvelopeSpy.firstCall.returnValue;
-            var obj0 = <Contracts.Data<Contracts.RemoteDependencyData>>envelopeCreated.data;
+            var obj0 = <Models.RemoteDependencyData>envelopeCreated.data.baseData;
             createEnvelopeSpy.restore();
-            assert.ok(!!obj0.baseData.id);
-            assert.deepEqual(obj0.baseData.properties, dependencyExpectedProperties);
+            assert.ok(!!obj0.id);
+            assert.deepEqual(obj0.properties, dependencyExpectedProperties);
         });
 
         it("should autopopulate target field for url data", () => {
@@ -786,9 +789,9 @@ describe("Library/TelemetryClient", () => {
 
 
             var envelopeCreated = createEnvelopeSpy.firstCall.returnValue;
-            var obj0 = <Contracts.Data<Contracts.RemoteDependencyData>>envelopeCreated.data;
+            var obj0 = <Models.RemoteDependencyData>envelopeCreated.data.baseData;
             createEnvelopeSpy.restore();
-            assert.equal(obj0.baseData.target, "bing.com");
+            assert.equal(obj0.target, "bing.com");
         });
 
         it("should not autopopulate target field for non-url data", () => {
@@ -801,9 +804,9 @@ describe("Library/TelemetryClient", () => {
 
 
             var envelopeCreated = createEnvelopeSpy.firstCall.returnValue;
-            var obj0 = <Contracts.Data<Contracts.RemoteDependencyData>>envelopeCreated.data;
+            var obj0 = <Models.RemoteDependencyData>envelopeCreated.data.baseData;
             createEnvelopeSpy.restore();
-            assert.equal(obj0.baseData.target, null);
+            assert.equal(obj0.target, null);
         });
     });
 
@@ -817,16 +820,16 @@ describe("Library/TelemetryClient", () => {
 
 
             var envelopeCreated = createEnvelopeSpy.firstCall.returnValue;
-            var obj0 = <Contracts.Data<Contracts.RequestData>>envelopeCreated.data;
+            var obj0 = <Models.RequestData>envelopeCreated.data.baseData;
             createEnvelopeSpy.restore();
 
-            assert.equal(obj0.baseData.name, name);
-            assert.equal(obj0.baseData.url, url);
-            assert.equal(obj0.baseData.source, 'source');
-            assert.equal(obj0.baseData.duration, Util.msToTimeSpan(value));
-            assert.equal(obj0.baseData.success, true);
-            assert.equal(obj0.baseData.responseCode, "200");
-            assert.deepEqual(obj0.baseData.properties, requestExpectedProperties);
+            assert.equal(obj0.name, name);
+            assert.equal(obj0.url, url);
+            assert.equal(obj0.source, 'source');
+            assert.equal(obj0.duration, Util.msToTimeSpan(value));
+            assert.equal(obj0.success, true);
+            assert.equal(obj0.responseCode, "200");
+            assert.deepEqual(obj0.properties, requestExpectedProperties);
         });
 
         it("should create envelope with correct properties (numeric resultCode)", () => {
@@ -838,16 +841,16 @@ describe("Library/TelemetryClient", () => {
 
 
             var envelopeCreated = createEnvelopeSpy.firstCall.returnValue;
-            var obj0 = <Contracts.Data<Contracts.RequestData>>envelopeCreated.data;
+            var obj0 = <Models.RequestData>envelopeCreated.data.baseData;
             createEnvelopeSpy.restore();
 
-            assert.equal(obj0.baseData.name, name);
-            assert.equal(obj0.baseData.url, url);
-            assert.equal(obj0.baseData.source, 'source');
-            assert.equal(obj0.baseData.duration, Util.msToTimeSpan(value));
-            assert.equal(obj0.baseData.success, true);
-            assert.equal(obj0.baseData.responseCode, "200");
-            assert.deepEqual(obj0.baseData.properties, requestExpectedProperties);
+            assert.equal(obj0.name, name);
+            assert.equal(obj0.url, url);
+            assert.equal(obj0.source, 'source');
+            assert.equal(obj0.duration, Util.msToTimeSpan(value));
+            assert.equal(obj0.success, true);
+            assert.equal(obj0.responseCode, "200");
+            assert.deepEqual(obj0.properties, requestExpectedProperties);
         });
 
         it("should process the id when specified", () => {
@@ -859,11 +862,11 @@ describe("Library/TelemetryClient", () => {
 
 
             var envelopeCreated = createEnvelopeSpy.firstCall.returnValue;
-            var obj0 = <Contracts.Data<Contracts.RequestData>>envelopeCreated.data;
+            var obj0 = <Models.RequestData>envelopeCreated.data.baseData;
             createEnvelopeSpy.restore();
 
-            assert.equal(obj0.baseData.id, "testid");
-            assert.deepEqual(obj0.baseData.properties, requestExpectedProperties);
+            assert.equal(obj0.id, "testid");
+            assert.deepEqual(obj0.properties, requestExpectedProperties);
         });
 
         it("should auto-generate the id when not specified", () => {
@@ -875,11 +878,11 @@ describe("Library/TelemetryClient", () => {
 
 
             var envelopeCreated = createEnvelopeSpy.firstCall.returnValue;
-            var obj0 = <Contracts.Data<Contracts.RequestData>>envelopeCreated.data;
+            var obj0 = <Models.RequestData>envelopeCreated.data.baseData;
             createEnvelopeSpy.restore();
 
-            assert.ok(!!obj0.baseData.id);
-            assert.deepEqual(obj0.baseData.properties, requestExpectedProperties);
+            assert.ok(!!obj0.id);
+            assert.deepEqual(obj0.properties, requestExpectedProperties);
         });
     });
 
@@ -919,7 +922,10 @@ describe("Library/TelemetryClient", () => {
             triggerStub.restore();
 
             // fake something in the buffer
-            client.channel._buffer.push("");
+            client.channel._buffer.push({
+                name: "test",
+                time: new Date()
+            });
             client.flush({ isAppCrashing: true });
 
             assert.ok(saveOnCrashStub.calledOnce);
@@ -961,9 +967,9 @@ describe("Library/TelemetryClient", () => {
             trackStub.restore();
             client.trackEvent({ name: "eventName", time: timestamp });
             trackStub = sinon.stub(client, "track");
-            var envelope = <Contracts.Envelope>createEnvelopeSpy.firstCall.returnValue;
+            var envelope = <Models.TelemetryItem>createEnvelopeSpy.firstCall.returnValue;
             createEnvelopeSpy.restore();
-            assert.equal(envelope.time, timestamp.toISOString());
+            assert.equal(envelope.time, timestamp);
         });
 
         it("telemetry processor can change the envelope", () => {
@@ -979,7 +985,7 @@ describe("Library/TelemetryClient", () => {
 
             assert.equal(sendStub.callCount, 1, "send called once");
 
-            var actualData = sendStub.firstCall.args[0] as Contracts.Envelope;
+            var actualData = sendStub.firstCall.args[0] as Models.TelemetryItem;
             assert.equal(actualData.name, expectedName, "envelope name should be changed by the processor");
         });
 
@@ -993,7 +999,7 @@ describe("Library/TelemetryClient", () => {
             client.track(testEventTelemetry, Contracts.TelemetryType.Event);
             process.env = originalEnv;
             assert.equal(sendStub.callCount, 1, "send called once");
-            var actualData = sendStub.firstCall.args[0] as Contracts.Envelope;
+            var actualData = sendStub.firstCall.args[0] as Models.TelemetryItem;
             assert.equal(actualData.tags[client.context.keys.cloudRole], "testRole");
         });
 
@@ -1012,7 +1018,7 @@ describe("Library/TelemetryClient", () => {
 
             assert.equal(sendStub.callCount, 1, "send called once");
 
-            var actualData = sendStub.firstCall.args[0] as Contracts.Envelope;
+            var actualData = sendStub.firstCall.args[0] as Models.TelemetryItem;
             assert.equal(actualData.name, expectedName, "envelope name should be changed by the processor");
         });
 
@@ -1036,7 +1042,7 @@ describe("Library/TelemetryClient", () => {
             client.track(testEventTelemetry, Contracts.TelemetryType.Event);
             assert.equal(sendStub.callCount, 1, "send called once");
 
-            var actualData = sendStub.firstCall.args[0] as Contracts.Envelope;
+            var actualData = sendStub.firstCall.args[0] as Models.TelemetryItem;
             assert.equal(actualData.name, "First, Second, Third", "processors should executed in the right order");
         });
 
@@ -1067,7 +1073,7 @@ describe("Library/TelemetryClient", () => {
             client.track(testEventTelemetry, Contracts.TelemetryType.Event);
 
             assert.ok(sendStub.called, "send should be called despite telemetry processor failure");
-            var actualData = sendStub.firstCall.args[0] as Contracts.Envelope;
+            var actualData = sendStub.firstCall.args[0] as Models.TelemetryItem;
             assert.equal(actualData.name, "more data", "more data is added as part of telemetry processor");
         });
     });

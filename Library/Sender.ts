@@ -1,22 +1,29 @@
 ﻿import fs = require("fs");
-import http = require("http");
-import https = require("https");
 import os = require("os");
 import path = require("path");
-import url = require("url");
 import zlib = require("zlib");
 import child_process = require("child_process");
 
+import coreHttp = require("@azure/core-http");
+
 import Logging = require("./Logging");
 import Config = require("./Config")
-import AutoCollectHttpDependencies = require("../AutoCollection/HttpDependencies");
-import Util = require("./Util");
+import {
+    ApplicationInsightsClient,
+    ApplicationInsightsClientOptionalParams,
+    ApplicationInsightsClientTrackResponse,
+    TelemetryItem
+} from "../generated";
+
 
 class Sender {
+    private readonly _appInsightsClient: ApplicationInsightsClient;
+    private _appInsightsClientOptions: ApplicationInsightsClientOptionalParams;
+    private _appInsightsClientFactories: coreHttp.RequestPolicyFactory[];
     private static TAG = "Sender";
     private static ICACLS_PATH = `${process.env.systemdrive}/windows/system32/icacls.exe`;
     private static POWERSHELL_PATH = `${process.env.systemdrive}/windows/system32/windowspowershell/v1.0/powershell.exe`;
-    private static ACLED_DIRECTORIES: {[id: string]: boolean} = {};
+    private static ACLED_DIRECTORIES: { [id: string]: boolean } = {};
     private static ACL_IDENTITY: string = null;
 
     // the amount of time the SDK will wait between resending cached data, this buffer is to avoid any throttling from the service side
@@ -28,7 +35,6 @@ class Sender {
     public static USE_ICACLS = os.type() === "Windows_NT";
 
     private _config: Config;
-    private _storageDirectory: string;
     private _onSuccess: (response: string) => void;
     private _onError: (error: Error) => void;
     private _enableDiskRetryMode: boolean;
@@ -47,6 +53,22 @@ class Sender {
         this._numConsecutiveFailures = 0;
         this._resendTimer = null;
 
+        this._appInsightsClientFactories = [
+            coreHttp.keepAlivePolicy({
+                enable: false
+            }),
+            coreHttp.deserializationPolicy(), //default
+        ];
+
+        this._appInsightsClientOptions = {
+            host: this._config.endpointUrl,
+            // requestPolicyFactories: this._appInsightsClientFactories
+        };
+
+        this._appInsightsClient = new ApplicationInsightsClient({
+            ...this._appInsightsClientOptions
+        });
+
         if (!Sender.OS_PROVIDES_FILE_PROTECTION) {
             // Node's chmod levels do not appropriately restrict file access on Windows
             // Use the built-in command line tool ICACLS on Windows to properly restrict
@@ -56,7 +78,7 @@ class Sender {
                 // This guarantees we can immediately fail setDiskRetryMode if we need to
                 try {
                     Sender.OS_PROVIDES_FILE_PROTECTION = fs.existsSync(Sender.ICACLS_PATH);
-                } catch (e) {}
+                } catch (e) { }
                 if (!Sender.OS_PROVIDES_FILE_PROTECTION) {
                     Logging.warn(Sender.TAG, "Could not find ICACLS in expected location! This is necessary to use disk retry mode on Windows.")
                 }
@@ -85,84 +107,51 @@ class Sender {
         }
     }
 
-    public send(payload: Buffer, callback?: (v: string) => void) {
-        var endpointUrl = this._config.endpointUrl;
+    public async send(envelopes: TelemetryItem[], callback?: (v: string) => void) {
 
-        // todo: investigate specifying an agent here: https://nodejs.org/api/http.html#http_class_http_agent
-        var options = {
-            method: "POST",
-            withCredentials: false,
-            headers: <{ [key: string]: string }>{
-                "Content-Type": "application/x-json-stream"
-            }
-        };
+        try {
+            var responseString = "";
+            const response: ApplicationInsightsClientTrackResponse = await this._appInsightsClient.track(envelopes);
 
-        zlib.gzip(payload, (err, buffer) => {
-            var dataToSend = buffer;
-            if (err) {
-                Logging.warn(err);
-                dataToSend = payload; // something went wrong so send without gzip
-                options.headers["Content-Length"] = payload.length.toString();
-            } else {
-                options.headers["Content-Encoding"] = "gzip";
-                options.headers["Content-Length"] = buffer.length.toString();
+            responseString = response._response.bodyAsText;
+            Logging.info(Sender.TAG, responseString);
+
+            if (typeof callback === "function") {
+                callback(responseString);
             }
 
-            Logging.info(Sender.TAG, options);
-
-            // Ensure this request is not captured by auto-collection.
-            (<any>options)[AutoCollectHttpDependencies.disableCollectionRequestOption] = true;
-
-            var requestCallback = (res: http.ClientResponse) => {
-                res.setEncoding("utf-8");
-
-                //returns empty if the data is accepted
-                var responseString = "";
-                res.on("data", (data: string) => {
-                    responseString += data;
-                });
-
-                res.on("end", () => {
-                    this._numConsecutiveFailures = 0;
-
-                    Logging.info(Sender.TAG, responseString);
-                    if (typeof this._onSuccess === "function") {
-                        this._onSuccess(responseString);
+            if (this._enableDiskRetryMode) {
+                // try to send any cached events if the user is back online
+                let statusCode = response._response.status;
+                if (statusCode === 200) {
+                    if (!this._resendTimer) {
+                        this._resendTimer = setTimeout(() => {
+                            this._resendTimer = null;
+                            this._sendFirstFileOnDisk()
+                        }, this._resendInterval);
+                        this._resendTimer.unref();
                     }
+                    // store to disk in case of burst throttling
+                } else if (
+                    statusCode === 408 || // Timeout
+                    statusCode === 429 || // Throttle
+                    statusCode === 439 || // Quota
+                    statusCode === 500 || // Server Error
+                    statusCode === 503) { // Service unavailable
 
-                    if (typeof callback === "function") {
-                        callback(responseString);
-                    }
+                    const filteredEnvelopes: TelemetryItem[] = response.errors.reduce(
+                        (acc, v) => [...acc, envelopes[v.index]],
+                        [] as TelemetryItem[]
+                    );
 
-                    if (this._enableDiskRetryMode) {
-                        // try to send any cached events if the user is back online
-                        if (res.statusCode === 200) {
-                            if (!this._resendTimer) {
-                                this._resendTimer = setTimeout(() => {
-                                    this._resendTimer = null;
-                                    this._sendFirstFileOnDisk()
-                                }, this._resendInterval);
-                                this._resendTimer.unref();
-                            }
-                            // store to disk in case of burst throttling
-                        } else if (
-                            res.statusCode === 408 || // Timeout
-                            res.statusCode === 429 || // Throttle
-                            res.statusCode === 439 || // Quota
-                            res.statusCode === 500 || // Server Error
-                            res.statusCode === 503) { // Service unavailable
-
-                            // TODO: Do not support partial success (206) until _sendFirstFileOnDisk checks payload age
-                            this._storeToDisk(payload);
-                        }
-                    }
-                });
-            };
-
-            var req = Util.makeRequest(this._config, endpointUrl, options, requestCallback);
-
-            req.on("error", (error: Error) => {
-                // todo: handle error codes better (group to recoverable/non-recoverable and persist)
+                    // TODO: Do not support partial success (206) until _sendFirstFileOnDisk checks payload age
+                    this._storeToDisk(filteredEnvelopes);
+                }
+            }
+            this._numConsecutiveFailures = 0;
+        }
+        catch (senderErr) {
+            if (this._isNetworkError(senderErr)) {
                 this._numConsecutiveFailures++;
 
                 // Only use warn level if retries are disabled or we've had some number of consecutive failures sending data
@@ -173,40 +162,46 @@ class Sender {
                     if (this._enableDiskRetryMode) {
                         notice = `Ingestion endpoint could not be reached ${this._numConsecutiveFailures} consecutive times. There may be resulting telemetry loss. Most recent error:`;
                     }
-                    Logging.warn(Sender.TAG, notice, error);
+                    Logging.warn(Sender.TAG, notice, senderErr);
                 } else {
                     let notice = "Transient failure to reach ingestion endpoint. This batch of telemetry items will be retried. Error:";
-                    Logging.info(Sender.TAG, notice, error)
+                    Logging.info(Sender.TAG, notice, senderErr)
                 }
-                this._onErrorHelper(error);
-
-                if (typeof callback === "function") {
-                    var errorMessage = "error sending telemetry";
-                    if (error && (typeof error.toString === "function")) {
-                        errorMessage = error.toString();
-                    }
-
-                    callback(errorMessage);
-                }
+                this._onErrorHelper(senderErr);
 
                 if (this._enableDiskRetryMode) {
-                    this._storeToDisk(payload);
+                    this._storeToDisk(envelopes);
                 }
-            });
+            }
 
-            req.write(dataToSend);
-            req.end();
-        });
+            if (typeof callback === "function") {
+                var errorMessage = "error sending telemetry";
+                if (senderErr && (typeof senderErr.toString === "function")) {
+                    errorMessage = senderErr.toString();
+                }
+                callback(errorMessage);
+            }
+        }
+
     }
 
-    public saveOnCrash(payload: string) {
+    public saveOnCrash(envelopes: TelemetryItem[]) {
         if (this._enableDiskRetryMode) {
-            this._storeToDiskSync(payload);
+            this._storeToDiskSync(envelopes);
         }
     }
 
+    private _isNetworkError(error: Error): boolean {
+        if (error instanceof coreHttp.RestError) {
+            if (error && error.code && error.code === "REQUEST_SEND_ERROR") {
+                return true;
+            }
+        }
+        return false;
+    }
+
     private _runICACLS(args: string[], callback: (err: Error) => void) {
-        var aclProc = child_process.spawn(Sender.ICACLS_PATH, args, <any>{windowsHide: true});
+        var aclProc = child_process.spawn(Sender.ICACLS_PATH, args, <any>{ windowsHide: true });
         aclProc.on("error", (e: Error) => callback(e));
         aclProc.on("close", (code: number, signal: string) => {
             return callback(code === 0 ? null : new Error(`Setting ACL restrictions did not succeed (ICACLS returned code ${code})`));
@@ -216,7 +211,7 @@ class Sender {
     private _runICACLSSync(args: string[]) {
         // Some very old versions of Node (< 0.11) don't have this
         if (child_process.spawnSync) {
-            var aclProc = child_process.spawnSync(Sender.ICACLS_PATH, args, <any>{windowsHide: true});
+            var aclProc = child_process.spawnSync(Sender.ICACLS_PATH, args, <any>{ windowsHide: true });
             if (aclProc.error) {
                 throw aclProc.error;
             } else if (aclProc.status !== 0) {
@@ -330,7 +325,7 @@ class Sender {
                         this._applyACLRules(directory, callback);
                     }
                 });
-            } else if (!err && stats.isDirectory()){
+            } else if (!err && stats.isDirectory()) {
                 this._applyACLRules(directory, callback);
             } else {
                 callback(err || new Error("Path existed but was not a directory"));
@@ -398,7 +393,7 @@ class Sender {
     /**
      * Stores the payload as a json file on disk in the temp directory
      */
-    private _storeToDisk(payload: any) {
+    private _storeToDisk(envelopes: TelemetryItem[]) {
         // tmpdir is /tmp for *nix and USERDIR/AppData/Local/Temp for Windows
         var directory = path.join(os.tmpdir(), Sender.TEMPDIR_PREFIX + this._config.instrumentationKey);
 
@@ -430,7 +425,7 @@ class Sender {
                 // Mode 600 is w/r for creator and no read access for others (only applies on *nix)
                 // For Windows, ACL rules are applied to the entire directory (see logic in _confirmDirExists and _applyACLRules)
                 Logging.info(Sender.TAG, "saving data to disk at: " + fileFullPath);
-                fs.writeFile(fileFullPath, payload, {mode: 0o600}, (error) => this._onErrorHelper(error));
+                fs.writeFile(fileFullPath, JSON.stringify(envelopes), { mode: 0o600 }, (error) => this._onErrorHelper(error));
             });
         });
     }
@@ -465,7 +460,7 @@ class Sender {
 
             // Mode 600 is w/r for creator and no access for anyone else (only applies on *nix)
             Logging.info(Sender.TAG, "saving data before crash to disk at: " + fileFullPath);
-            fs.writeFileSync(fileFullPath, payload, {mode: 0o600});
+            fs.writeFileSync(fileFullPath, payload, { mode: 0o600 });
 
         } catch (error) {
             Logging.warn(Sender.TAG, "Error while saving data to disk: " + (error && error.message));
@@ -488,11 +483,12 @@ class Sender {
                         if (files.length > 0) {
                             var firstFile = files[0];
                             var filePath = path.join(tempDir, firstFile);
-                            fs.readFile(filePath, (error, payload) => {
+                            fs.readFile(filePath, (error, buffer) => {
                                 if (!error) {
                                     // delete the file first to prevent double sending
                                     fs.unlink(filePath, (error) => {
                                         if (!error) {
+                                            let payload = JSON.parse(buffer.toString("utf8"));
                                             this.send(payload);
                                         } else {
                                             this._onErrorHelper(error);

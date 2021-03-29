@@ -90,7 +90,7 @@ class AutoCollectHttpRequests {
                 CorrelationContextManager.wrapEmitter(response);
                 const shouldCollect: boolean = request && !(<any>request)[AutoCollectHttpRequests.alreadyAutoCollectedFlag];
 
-                if (request && shouldCollect) {
+                if (shouldCollect) {
                     // Set up correlation context
                     const requestParser = new HttpRequestParser(request);
                     const correlationContext = this._generateCorrelationContext(requestParser);
@@ -100,7 +100,7 @@ class AutoCollectHttpRequests {
                     CorrelationContextManager.runWithContext(correlationContext, () => {
                         if (this._isEnabled) {
                             // Mark as auto collected
-                            (<any>request)[AutoCollectHttpRequests.alreadyAutoCollectedFlag] = true;
+                            //(<any>request)[AutoCollectHttpRequests.alreadyAutoCollectedFlag] = true;
 
                             // Auto collect request
                             AutoCollectHttpRequests.trackRequest(this._client, { request: request, response: response }, requestParser);

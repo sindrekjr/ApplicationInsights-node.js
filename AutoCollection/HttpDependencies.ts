@@ -60,17 +60,17 @@ class AutoCollectHttpDependencies {
         const originalHttpsRequest = https.request;
 
         const clientRequestPatch = (request: http.ClientRequest, options: string | URL | http.RequestOptions | https.RequestOptions) => {
-            var shouldCollect = !(<any>options)[AutoCollectHttpDependencies.disableCollectionRequestOption] &&
+            var shouldCollect = request && options && !(<any>options)[AutoCollectHttpDependencies.disableCollectionRequestOption] &&
                 !(<any>request)[AutoCollectHttpDependencies.alreadyAutoCollectedFlag];
 
             // If someone else patched traceparent headers onto this request
-            if ((<any>options).headers && (<any>options).headers['user-agent'] && (<any>options).headers['user-agent'].toString().indexOf('azsdk-js') !== -1) {
+            if (options && (<any>options).headers && (<any>options).headers['user-agent'] && (<any>options).headers['user-agent'].toString().indexOf('azsdk-js') !== -1) {
                 shouldCollect = false;
             }
 
-            (<any>request)[AutoCollectHttpDependencies.alreadyAutoCollectedFlag] = true;
+            //(<any>request)[AutoCollectHttpDependencies.alreadyAutoCollectedFlag] = true;
 
-            if (request && options && shouldCollect) {
+            if (shouldCollect) {
                 CorrelationContextManager.wrapEmitter(request);
                 AutoCollectHttpDependencies.trackRequest(this._client, { options: options, request: request });
             }

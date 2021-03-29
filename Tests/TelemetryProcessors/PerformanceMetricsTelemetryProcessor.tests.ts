@@ -4,21 +4,21 @@ import sinon = require("sinon");
 import QuickPulse = require("../../TelemetryProcessors/PerformanceMetricsTelemetryProcessor");
 import QuickPulseStateManager = require("../../Library/QuickPulseStateManager");
 import AutoCollectPerformance = require("../../AutoCollection/Performance");
-import { Contracts } from "../../applicationinsights";
+import { Contracts, Models } from "../../applicationinsights";
 
 describe("TelemetryProcessors/PerformanceMetricsTelemetryProcessor", () => {
     describe("#PerformanceMetricsTelemetryProcessor()", () => {
-        var envelope: Contracts.Envelope = {
-            ver: 2,
+        var envelope: Models.TelemetryItem = {
+            version: 2,
             name: "name",
             data: {
                 baseType: "SomeData"
             },
-            iKey: ikey,
+            instrumentationKey: ikey,
             sampleRate: 100,
-            seq: "",
-            time: "",
-            tags: []
+            sequence: "",
+            time: new Date(),
+            tags: {}
         };
         var ikey = "1aa11111-bbbb-1ccc-8ddd-eeeeffff3333";
 

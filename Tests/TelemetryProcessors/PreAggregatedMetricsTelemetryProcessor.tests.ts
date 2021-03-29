@@ -2,34 +2,47 @@ import assert = require("assert");
 import sinon = require("sinon");
 import Client = require("../../Library/TelemetryClient");
 import TelemetryProcessor = require("../../TelemetryProcessors/PreAggregatedMetricsTelemetryProcessor");
-import AutoCollecPreAggregatedMetrics = require("../../AutoCollection/PreAggregatedMetrics");
-import { Contracts } from "../../applicationinsights";
-import { env } from "process";
+import AutoCollectPreAggregatedMetrics = require("../../AutoCollection/PreAggregatedMetrics");
+import { Contracts, Models } from "../../applicationinsights";
 
 describe("TelemetryProcessors/PreAggregatedMetricsTelemetryProcessor", () => {
+
+    var envelope: Models.TelemetryItem = {
+        version: 2,
+        name: "name",
+        data: {
+            baseType: "SomeData"
+        },
+        instrumentationKey: ikey,
+        sampleRate: 100,
+        sequence: "",
+        time: new Date(),
+        tags: {}
+    };
+    var ikey = "1aa11111-bbbb-1ccc-8ddd-eeeeffff3333";
+    var client = new Client(ikey);
+    var preAggregated: AutoCollectPreAggregatedMetrics = null;
+
+
     describe("#preAggregatedMetricsTelemetryProcessor()", () => {
-        var envelope: Contracts.Envelope = {
-            ver: 2,
-            name: "name",
-            data: {
-                baseType: "SomeData"
-            },
-            iKey: ikey,
-            sampleRate: 100,
-            seq: "",
-            time: "",
-            tags: []
-        };
-        var ikey = "1aa11111-bbbb-1ccc-8ddd-eeeeffff3333";
-        var client = new Client(ikey);
+
+        before(function () {
+            preAggregated = new AutoCollectPreAggregatedMetrics(client);
+            preAggregated.enable(true);
+        });
 
         it("Exception telemetry", () => {
-            var pgSpy = sinon.spy(AutoCollecPreAggregatedMetrics, "countException");
-            var exception = new Contracts.ExceptionData();
-            var data = new Contracts.Data<Contracts.ExceptionData>();
-            data.baseData = exception;
+            var pgSpy = sinon.spy(AutoCollectPreAggregatedMetrics, "countException");
+            var exception: Models.TelemetryExceptionData = {
+                version: 1,
+                exceptions: []
+            };
+            var data: Models.MonitorBase = {
+                baseData: exception,
+                baseType: "ExceptionData"
+            };
+
             envelope.data = data;
-            envelope.data.baseType = "ExceptionData";
             var res = TelemetryProcessor.preAggregatedMetricsTelemetryProcessor(envelope, client.context);
             var testEnv = <any>envelope;
             assert.equal(testEnv.data.baseData.properties["_MS.ProcessedByMetricExtractors"], "(Name:'Exceptions', Ver:'1.1')");
@@ -38,12 +51,13 @@ describe("TelemetryProcessors/PreAggregatedMetricsTelemetryProcessor", () => {
         });
 
         it("Trace telemetry", () => {
-            var pgSpy = sinon.spy(AutoCollecPreAggregatedMetrics, "countTrace");
-            var trace: Contracts.TraceTelemetry = { message: "" };
-            var data = new Contracts.Data<Contracts.TraceTelemetry>();
-            data.baseData = trace;
+            var pgSpy = sinon.spy(AutoCollectPreAggregatedMetrics, "countTrace");
+            var trace: Models.MessageData = { version: 1, message: "" };
+            var data: Models.MonitorBase = {
+                baseData: trace,
+                baseType: "MessageData"
+            };
             envelope.data = data;
-            envelope.data.baseType = "MessageData";
             var res = TelemetryProcessor.preAggregatedMetricsTelemetryProcessor(envelope, client.context);
             var testEnv = <any>envelope;
             assert.equal(testEnv.data.baseData.properties["_MS.ProcessedByMetricExtractors"], "(Name:'Traces', Ver:'1.1')");
@@ -52,12 +66,13 @@ describe("TelemetryProcessors/PreAggregatedMetricsTelemetryProcessor", () => {
         });
 
         it("Dependency telemetry", () => {
-            var pgSpy = sinon.spy(AutoCollecPreAggregatedMetrics, "countDependency");
-            var dependency: Contracts.DependencyTelemetry = { name: "", dependencyTypeName: "", data: "", duration: 1, resultCode: "", success: false };
-            var data = new Contracts.Data<Contracts.DependencyTelemetry>();
-            data.baseData = dependency;
+            var pgSpy = sinon.spy(AutoCollectPreAggregatedMetrics, "countDependency");
+            var dependency: Models.RemoteDependencyData = { version: 1, name: "", dependencyTypeName: "", data: "", duration: "", resultCode: "", success: false };
+            var data: Models.MonitorBase = {
+                baseData: dependency,
+                baseType: "RemoteDependencyData"
+            };
             envelope.data = data;
-            envelope.data.baseType = "RemoteDependencyData";
             var res = TelemetryProcessor.preAggregatedMetricsTelemetryProcessor(envelope, client.context);
             var testEnv = <any>envelope;
             assert.equal(testEnv.data.baseData.properties["_MS.ProcessedByMetricExtractors"], "(Name:'Dependencies', Ver:'1.1')");
@@ -66,12 +81,13 @@ describe("TelemetryProcessors/PreAggregatedMetricsTelemetryProcessor", () => {
         });
 
         it("Request telemetry", () => {
-            var pgSpy = sinon.spy(AutoCollecPreAggregatedMetrics, "countRequest");
-            var request: Contracts.RequestTelemetry = { name: "", url: "", duration: 1, resultCode: "", success: false };
-            var data = new Contracts.Data<Contracts.RequestTelemetry>();
-            data.baseData = request;
+            var pgSpy = sinon.spy(AutoCollectPreAggregatedMetrics, "countRequest");
+            var request: Models.RequestData = { version: 1, name: "", url: "", duration: "1", resultCode: "", success: false, id: "", responseCode: "" };
+            var data: Models.MonitorBase = {
+                baseData: request,
+                baseType: "RequestData"
+            };
             envelope.data = data;
-            envelope.data.baseType = "RequestData";
             var res = TelemetryProcessor.preAggregatedMetricsTelemetryProcessor(envelope, client.context);
             var testEnv = <any>envelope;
             assert.equal(testEnv.data.baseData.properties["_MS.ProcessedByMetricExtractors"], "(Name:'Requests', Ver:'1.1')");

@@ -1,9 +1,8 @@
 import assert = require("assert");
-import sinon = require("sinon");
-import http = require("http");
 
 import EnvelopeFactory = require("../../Library/EnvelopeFactory");
 import Contracts = require("../../Declarations/Contracts");
+import Models = require("../../generated");
 import Client = require("../../Library/TelemetryClient");
 import Util = require("../../Library/Util");
 
@@ -17,44 +16,44 @@ describe("Library/EnvelopeFactory", () => {
             var client1 = new Client("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333");
             client1.commonProperties = commonproperties;
             client1.config.samplingPercentage = 99;
-            var eventTelemetry = <Contracts.EventTelemetry>{name:"name"};
-            eventTelemetry.properties  = properties;
+            var eventTelemetry = <Contracts.EventTelemetry>{ name: "name" };
+            eventTelemetry.properties = properties;
             var env = EnvelopeFactory.createEnvelope(eventTelemetry, Contracts.TelemetryType.Event, commonproperties, client1.context, client1.config);
 
             // check sample rate
             assert.equal(env.sampleRate, client1.config.samplingPercentage);
 
-            var envData:Contracts.Data<Contracts.EventData> = <Contracts.Data<Contracts.EventData>> env.data;
+            var envData: Models.TelemetryEventData = <Models.TelemetryEventData>env.data.baseData;
 
             // check common properties
-            assert.equal(envData.baseData.properties.common1, (<any>commonproperties).common1);
-            assert.equal(envData.baseData.properties.common2, (<any>commonproperties).common2);
+            assert.equal(envData.properties.common1, (<any>commonproperties).common1);
+            assert.equal(envData.properties.common2, (<any>commonproperties).common2);
 
             // check argument properties
-            assert.equal(envData.baseData.properties.p1, (<any>properties).p1);
-            assert.equal(envData.baseData.properties.p2, (<any>properties).p2);
+            assert.equal(envData.properties.p1, (<any>properties).p1);
+            assert.equal(envData.properties.p2, (<any>properties).p2);
 
             // check that argument properties overwrite common properties1
-            assert.equal(envData.baseData.properties.common, (<any>properties).common);
+            assert.equal(envData.properties.common, (<any>properties).common);
         });
 
         it("should allow tags to be overwritten", () => {
 
             var client = new Client("1aa11111-bbbb-1ccc-8ddd-eeeeffff3333");
-            var env = EnvelopeFactory.createEnvelope(<Contracts.EventTelemetry>{name:"name"}, Contracts.TelemetryType.Event, commonproperties, client.context, client.config);
+            var env = EnvelopeFactory.createEnvelope(<Contracts.EventTelemetry>{ name: "name" }, Contracts.TelemetryType.Event, commonproperties, client.context, client.config);
             assert.deepEqual(env.tags, client.context.tags, "tags are set by default");
             var customTag = <{ [id: string]: string }>{ "ai.cloud.roleInstance": "override" };
             var expected: { [id: string]: string } = {};
             for (var tag in client.context.tags) {
                 expected[tag] = customTag[tag] || client.context.tags[tag];
             }
-            env = EnvelopeFactory.createEnvelope(<Contracts.EventTelemetry>{name:"name", tagOverrides:customTag}, Contracts.TelemetryType.Event, commonproperties, client.context, client.config);
+            env = EnvelopeFactory.createEnvelope(<Contracts.EventTelemetry>{ name: "name", tagOverrides: customTag }, Contracts.TelemetryType.Event, commonproperties, client.context, client.config);
             assert.deepEqual(env.tags, expected)
         });
 
         it("should have valid name", function () {
             var client = new Client("key");
-            var envelope = EnvelopeFactory.createEnvelope(<Contracts.EventTelemetry>{name:"name"}, Contracts.TelemetryType.Event, commonproperties, client.context, client.config);
+            var envelope = EnvelopeFactory.createEnvelope(<Contracts.EventTelemetry>{ name: "name" }, Contracts.TelemetryType.Event, commonproperties, client.context, client.config);
             assert.equal(envelope.name, "Microsoft.ApplicationInsights.key.Event");
         });
     });
@@ -69,7 +68,7 @@ describe("Library/EnvelopeFactory", () => {
                     success: true,
                     resultCode: 200
                 }, Contracts.TelemetryType.Dependency);
-                assert.equal((envelope.data as Contracts.Data<Contracts.RemoteDependencyData>).baseData.name, undefined);
+                assert.equal((envelope.data.baseData as Models.RemoteDependencyData).name, undefined);
             });
         });
     });
@@ -89,8 +88,8 @@ describe("Library/EnvelopeFactory", () => {
             simpleError.stack = "  at \t (/path/file.js:12:34)\n" + simpleError.stack;
 
             var envelope = EnvelopeFactory.createEnvelope(<Contracts.ExceptionTelemetry>{ exception: simpleError }, Contracts.TelemetryType.Exception);
-            var exceptionData = <Contracts.Data<Contracts.ExceptionData>>envelope.data;
-            var actual = exceptionData.baseData.exceptions[0].parsedStack[0].method;
+            var exceptionData = <Models.TelemetryExceptionData>envelope.data.baseData;
+            var actual = exceptionData.exceptions[0].parsedStack[0].method;
             var expected = "<no_method>";
 
             assert.deepEqual(actual, expected);
@@ -100,21 +99,21 @@ describe("Library/EnvelopeFactory", () => {
             simpleError.stack = "  at Context.<anonymous> (\t:12:34)\n" + simpleError.stack;
 
             var envelope = EnvelopeFactory.createEnvelope(<Contracts.ExceptionTelemetry>{ exception: simpleError }, Contracts.TelemetryType.Exception);
-            var exceptionData = <Contracts.Data<Contracts.ExceptionData>>envelope.data;
+            var exceptionData = <Models.TelemetryExceptionData>envelope.data.baseData;
 
-            var actual = exceptionData.baseData.exceptions[0].parsedStack[0].fileName;
+            var actual = exceptionData.exceptions[0].parsedStack[0].fileName;
             var expected = "<no_filename>";
 
             assert.deepEqual(actual, expected);
         });
-        
+
         it("fills stack when provided a scoped package", () => {
             simpleError.stack = "  at Context.foo (C:/@foo/bar/example.js:123:45)\n" + simpleError.stack;
-            
-            var envelope = EnvelopeFactory.createEnvelope(<Contracts.ExceptionTelemetry>{ exception: simpleError }, Contracts.TelemetryType.Exception);
-            var exceptionData = <Contracts.Data<Contracts.ExceptionData>>envelope.data;
 
-            var actual = exceptionData.baseData.exceptions[0].parsedStack[0];
+            var envelope = EnvelopeFactory.createEnvelope(<Contracts.ExceptionTelemetry>{ exception: simpleError }, Contracts.TelemetryType.Exception);
+            var exceptionData = <Models.TelemetryExceptionData>envelope.data.baseData;
+
+            var actual = exceptionData.exceptions[0].parsedStack[0];
 
             assert.deepEqual(actual, {
                 fileName: "C:/@foo/bar/example.js",
@@ -125,14 +124,14 @@ describe("Library/EnvelopeFactory", () => {
                 method: "Context.foo"
             });
         });
-        
+
         it("fills stack when provided a scoped package", () => {
             simpleError.stack = "  at C:/@foo/bar/example.js:123:45\n" + simpleError.stack;
-            
-            var envelope = EnvelopeFactory.createEnvelope(<Contracts.ExceptionTelemetry>{ exception: simpleError }, Contracts.TelemetryType.Exception);
-            var exceptionData = <Contracts.Data<Contracts.ExceptionData>>envelope.data;
 
-            var actual = exceptionData.baseData.exceptions[0].parsedStack[0];
+            var envelope = EnvelopeFactory.createEnvelope(<Contracts.ExceptionTelemetry>{ exception: simpleError }, Contracts.TelemetryType.Exception);
+            var exceptionData = <Models.TelemetryExceptionData>envelope.data.baseData;
+
+            var actual = exceptionData.exceptions[0].parsedStack[0];
 
             assert.deepEqual(actual, {
                 fileName: "C:/@foo/bar/example.js",
@@ -146,9 +145,9 @@ describe("Library/EnvelopeFactory", () => {
 
         it("fills 'severityLevel' with Error when not specified", () => {
             var envelope = EnvelopeFactory.createEnvelope(<Contracts.ExceptionTelemetry>{ exception: simpleError }, Contracts.TelemetryType.Exception);
-            var exceptionData = <Contracts.Data<Contracts.ExceptionData>>envelope.data;
+            var exceptionData = <Models.TelemetryExceptionData>envelope.data.baseData;
 
-            var actual = exceptionData.baseData.severityLevel;
+            var actual = exceptionData.severityLevel;
             var expected = Contracts.SeverityLevel.Error;
 
             assert.deepEqual(actual, expected);
@@ -156,9 +155,9 @@ describe("Library/EnvelopeFactory", () => {
 
         it("fills 'severityLevel' with the given value when specified", () => {
             var envelope = EnvelopeFactory.createEnvelope(<Contracts.ExceptionTelemetry>{ exception: simpleError, severity: Contracts.SeverityLevel.Warning }, Contracts.TelemetryType.Exception);
-            var exceptionData = <Contracts.Data<Contracts.ExceptionData>>envelope.data;
+            var exceptionData = <Models.TelemetryExceptionData>envelope.data.baseData;
 
-            var actual = exceptionData.baseData.severityLevel;
+            var actual = exceptionData.severityLevel;
             var expected = Contracts.SeverityLevel.Warning;
 
             assert.deepEqual(actual, expected);
@@ -168,13 +167,13 @@ describe("Library/EnvelopeFactory", () => {
     describe("AvailabilityData", () => {
         let availabilityTelemetry: Contracts.AvailabilityTelemetry;
         beforeEach(() => {
-            availabilityTelemetry  = {
-                success : true,
+            availabilityTelemetry = {
+                success: true,
                 duration: 100,
-                measurements: { "m1" : 1},
+                measurements: { "m1": 1 },
                 runLocation: "west us",
                 properties: {
-                    "prop1" : "prop1 value"
+                    "prop1": "prop1 value"
                 },
                 message: "availability test message",
                 name: "availability test name",
@@ -186,23 +185,23 @@ describe("Library/EnvelopeFactory", () => {
             availabilityTelemetry.id = undefined;
 
             var envelope = EnvelopeFactory.createEnvelope(availabilityTelemetry, Contracts.TelemetryType.Availability);
-            var data =  <Contracts.Data<Contracts.AvailabilityData>>envelope.data;
-            assert.ok(data.baseData.id != null);
+            var data = <Models.AvailabilityData>envelope.data.baseData;
+            assert.ok(data.id != null);
         });
 
         it("creates data with given content", () => {
             var envelope = EnvelopeFactory.createEnvelope(availabilityTelemetry, Contracts.TelemetryType.Availability);
-            var data =  <Contracts.Data<Contracts.AvailabilityData>>envelope.data;
+            var data = <Models.AvailabilityData>envelope.data.baseData;
 
-            assert.deepEqual(data.baseType, "AvailabilityData");
+            assert.deepEqual(envelope.data.baseType, "AvailabilityData");
 
-            assert.deepEqual(data.baseData.id, availabilityTelemetry.id);
-            assert.deepEqual(data.baseData.measurements, availabilityTelemetry.measurements);
-            assert.deepEqual(data.baseData.success, availabilityTelemetry.success);
-            assert.deepEqual(data.baseData.runLocation, availabilityTelemetry.runLocation);
-            assert.deepEqual(data.baseData.name, availabilityTelemetry.name);
-            assert.deepEqual(data.baseData.properties, availabilityTelemetry.properties);
-            assert.deepEqual(data.baseData.duration, Util.msToTimeSpan(availabilityTelemetry.duration));
+            assert.deepEqual(data.id, availabilityTelemetry.id);
+            assert.deepEqual(data.measurements, availabilityTelemetry.measurements);
+            assert.deepEqual(data.success, availabilityTelemetry.success);
+            assert.deepEqual(data.runLocation, availabilityTelemetry.runLocation);
+            assert.deepEqual(data.name, availabilityTelemetry.name);
+            assert.deepEqual(data.properties, availabilityTelemetry.properties);
+            assert.deepEqual(data.duration, Util.msToTimeSpan(availabilityTelemetry.duration));
 
         });
     });
@@ -210,11 +209,11 @@ describe("Library/EnvelopeFactory", () => {
     describe("PageViewData", () => {
         let pageViewTelemetry: Contracts.PageViewTelemetry;
         beforeEach(() => {
-            pageViewTelemetry  = {
+            pageViewTelemetry = {
                 duration: 100,
-                measurements: { "m1" : 1},
+                measurements: { "m1": 1 },
                 properties: {
-                    "prop1" : "prop1 value"
+                    "prop1": "prop1 value"
                 },
                 url: "https://www.test.com",
                 name: "availability test name",
@@ -223,15 +222,15 @@ describe("Library/EnvelopeFactory", () => {
 
         it("creates data with given content", () => {
             var envelope = EnvelopeFactory.createEnvelope(pageViewTelemetry, Contracts.TelemetryType.PageView);
-            var data =  <Contracts.Data<Contracts.PageViewData>>envelope.data;
+            var data = <Models.PageViewData>envelope.data.baseData;
 
-            assert.deepEqual(data.baseType, "PageViewData");
+            assert.deepEqual(envelope.data.baseType, "PageViewData");
 
-            assert.deepEqual(data.baseData.url, pageViewTelemetry.url);
-            assert.deepEqual(data.baseData.measurements, pageViewTelemetry.measurements);
-            assert.deepEqual(data.baseData.name, pageViewTelemetry.name);
-            assert.deepEqual(data.baseData.properties, pageViewTelemetry.properties);
-            assert.deepEqual(data.baseData.duration, Util.msToTimeSpan(pageViewTelemetry.duration));
+            assert.deepEqual(data.url, pageViewTelemetry.url);
+            assert.deepEqual(data.measurements, pageViewTelemetry.measurements);
+            assert.deepEqual(data.name, pageViewTelemetry.name);
+            assert.deepEqual(data.properties, pageViewTelemetry.properties);
+            assert.deepEqual(data.duration, Util.msToTimeSpan(pageViewTelemetry.duration));
 
         });
     });

@@ -1,22 +1,22 @@
 import assert = require("assert");
 import Client = require("../../Library/TelemetryClient");
-import { Contracts } from "../../applicationinsights";
+import { Contracts, Models } from "../../applicationinsights";
 
 import AzureProps = require("../../TelemetryProcessors/AzureRoleEnvironmentTelemetryInitializer");
 
 describe("TelemetryProcessors/AzureRoleEnvironmentTelemetryInitializer", () => {
     var ikey = "1aa11111-bbbb-1ccc-8ddd-eeeeffff3333";
-    var envelope: Contracts.Envelope = {
-        ver: 2,
+    var envelope: Models.TelemetryItem = {
+        version: 2,
         name: "name",
         data: {
             baseType: "SomeData"
         },
-        iKey: ikey,
+        instrumentationKey: ikey,
         sampleRate: 100,
-        seq: "",
-        time: "",
-        tags: []
+        sequence: "",
+        time: new Date(),
+        tags: {}
     };
     var client = new Client(ikey);
 

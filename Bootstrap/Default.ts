@@ -1,9 +1,9 @@
 import * as types from "../applicationinsights";
 import * as Helpers from "./Helpers";
-import * as DataModel from "./DataModel";
 import Constants = require("../Declarations/Constants");
 import { StatusLogger, StatusContract } from "./StatusLogger";
 import { DiagnosticLogger } from "./DiagnosticLogger";
+import { TelemetryItem } from "../generated";
 
 // Private configuration vars
 let _appInsights: typeof types | null;
@@ -76,7 +76,7 @@ export function setupAndStart(setupString = _setupString): typeof types | null {
             return _appInsights;
         }
 
-        const prefixInternalSdkVersion = function (envelope: types.Contracts.Envelope, _contextObjects: Object) {
+        const prefixInternalSdkVersion = function (envelope: TelemetryItem, _contextObjects: Object) {
             try {
                 var appInsightsSDKVersion = _appInsights.defaultClient.context.keys.internalSdkVersion;
                 envelope.tags[appInsightsSDKVersion] = _prefix + envelope.tags[appInsightsSDKVersion];
@@ -86,7 +86,7 @@ export function setupAndStart(setupString = _setupString): typeof types | null {
             return true;
         }
 
-        const copyOverPrefixInternalSdkVersionToHeartBeatMetric = function (envelope: types.Contracts.Envelope, _contextObjects: Object) {
+        const copyOverPrefixInternalSdkVersionToHeartBeatMetric = function (envelope: TelemetryItem, _contextObjects: Object) {
             var appInsightsSDKVersion = _appInsights.defaultClient.context.keys.internalSdkVersion;
             const sdkVersion = envelope.tags[appInsightsSDKVersion] || "";
             if (envelope.name === Constants.HeartBeatMetricName) {

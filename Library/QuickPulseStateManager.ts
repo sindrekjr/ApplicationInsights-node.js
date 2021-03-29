@@ -3,7 +3,9 @@ import Config = require("./Config");
 import QuickPulseEnvelopeFactory = require("./QuickPulseEnvelopeFactory");
 import QuickPulseSender = require("./QuickPulseSender");
 import Constants = require("../Declarations/Constants");
+import Models = require("../generated");
 import Context = require("./Context");
+
 
 import * as http from "http";
 import * as Contracts from "../Declarations/Contracts";
@@ -58,7 +60,7 @@ class QuickPulseStateManager {
      * Add a document to the current buffer
      * @param envelope
      */
-    public addDocument(envelope: Contracts.Envelope): void {
+    public addDocument(envelope: Models.TelemetryItem): void {
         const document = QuickPulseEnvelopeFactory.telemetryEnvelopeToQuickPulseDocument(envelope);
         if (document) {
             this._documents.push(document);
