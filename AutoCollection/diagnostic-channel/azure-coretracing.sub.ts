@@ -30,27 +30,25 @@ export const subscriber = (event: IStandardEvent<Span>) => {
     catch (err) { { /** ignore errors */ } }
 };
 
+
 export function enable(enabled: boolean, client: TelemetryClient) {
-    let statsbeat = client.getStatsbeat();
     if (enabled) {
         let clientFound = clients.find(c => c == client);
         if (clientFound) {
             return;
         }
         if (clients.length === 0) {
-            channel.subscribe<any>("azure-coretracing", subscriber);
-            if (statsbeat) {
-                statsbeat.addInstrumentation(StatsbeatInstrumentation.AZURE_CORE_TRACING);
-            }
+            channel.subscribe<any>("azure-coretracing", subscriber, (publishing: boolean) => true, patchCallback);
         };
         clients.push(client);
     } else {
         clients = clients.filter((c) => c != client);
         if (clients.length === 0) {
             channel.unsubscribe("azure-coretracing", subscriber);
-            if (statsbeat) {
-                statsbeat.removeInstrumentation(StatsbeatInstrumentation.AZURE_CORE_TRACING);
-            }
         }
     }
+}
+
+function patchCallback(moduleName: string, version: string) {
+    console.log("moduleName:" + moduleName + " version:" + version );
 }
