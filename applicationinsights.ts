@@ -224,6 +224,8 @@ export function wrapWithCorrelationContext<T extends Function>(fn: T, context?: 
  * The active configuration for global SDK behaviors, such as autocollection.
  */
 export class Configuration {
+    public static defaultClient: TelemetryClient;
+
     // Convenience shortcut to ApplicationInsights.start
     public static start = start;
 
